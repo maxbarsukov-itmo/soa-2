@@ -16,6 +16,25 @@ public class RequestValidationFilter implements ContainerRequestFilter {
 
   @Override
   public void filter(ContainerRequestContext requestContext) throws IOException {
+    String method = requestContext.getMethod();
+    if ("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method)) {
+      String contentType = requestContext.getHeaderString("Content-Type");
+      if (contentType == null) {
+        ErrorResponse error = new ErrorResponse(415, "Content-Type header is required");
+        error.setTime(OffsetDateTime.now());
+        requestContext.abortWith(Response.status(415).entity(error).build());
+        return;
+      }
+
+      contentType = contentType.toLowerCase();
+      if (!contentType.startsWith("application/json")) {
+        ErrorResponse error = new ErrorResponse(415, "Content-Type must be application/json");
+        error.setTime(OffsetDateTime.now());
+        requestContext.abortWith(Response.status(415).entity(error).build());
+        return;
+      }
+    }
+
     String contentType = requestContext.getHeaderString("Content-Type");
     if (contentType != null) {
       contentType = contentType.toLowerCase();

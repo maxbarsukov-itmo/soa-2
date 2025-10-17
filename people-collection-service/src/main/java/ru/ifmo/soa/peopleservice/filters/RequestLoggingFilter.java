@@ -27,6 +27,10 @@ public class RequestLoggingFilter implements ContainerRequestFilter, ContainerRe
 
   @Override
   public void filter(ContainerRequestContext requestContext) throws IOException {
+    if ("OPTIONS".equals(requestContext.getMethod())) {
+      return;
+    }
+
     String clientIP = requestContext.getHeaderString("X-Forwarded-For");
     if (clientIP == null || clientIP.isEmpty()) {
       clientIP = requestContext.getUriInfo().getRequestUri().getHost();

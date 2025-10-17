@@ -130,24 +130,32 @@ public class PersonRepository {
   private Object parseValue(Class<?> type, String value) {
     if (type == null || value == null) return value;
 
-    if (type == String.class) {
-      return value;
-    } else if (type == Integer.class || type == int.class) {
-      return Integer.valueOf(value);
-    } else if (type == Long.class || type == long.class) {
-      return Long.valueOf(value);
-    } else if (type == Double.class || type == double.class) {
-      return Double.valueOf(value);
-    } else if (type == Boolean.class || type == boolean.class) {
-      return Boolean.parseBoolean(value);
-    } else if (type == LocalDateTime.class) {
-      return LocalDateTime.parse(value);
-    } else if (type.isEnum()) {
-      try {
-        return Enum.valueOf((Class<Enum>) type, value);
-      } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException("Invalid enum value: " + value + " for type " + type.getSimpleName());
+    try {
+      if (type == String.class) {
+        return value;
+      } else if (type == Integer.class || type == int.class) {
+        return Integer.valueOf(value);
+      } else if (type == Long.class || type == long.class) {
+        return Long.valueOf(value);
+      } else if (type == Float.class || type == float.class) {
+        return Float.valueOf(value);
+      } else if (type == Double.class || type == double.class) {
+        return Double.valueOf(value);
+      } else if (type == Boolean.class || type == boolean.class) {
+        return Boolean.parseBoolean(value);
+      } else if (type == LocalDateTime.class) {
+        return LocalDateTime.parse(value);
+      } else if (type.isEnum()) {
+        try {
+          return Enum.valueOf((Class<Enum>) type, value);
+        } catch (IllegalArgumentException e) {
+          throw new IllegalArgumentException("Invalid enum value: " + value + " for type " + type.getSimpleName());
+        }
       }
+    } catch (NumberFormatException e) {
+      throw new SemanticException("Invalid numeric value: " + value + " for type " + type.getSimpleName());
+    } catch (Exception e) {
+      throw new SemanticException("Failed to parse value: " + value + " for type " + type.getSimpleName());
     }
 
     throw new IllegalArgumentException("Unsupported field type: " + type);
@@ -361,12 +369,20 @@ public class PersonRepository {
   public int deleteByLocation(ru.ifmo.soa.peopleservice.entities.Location location) {
     try (EntityManager em = DatabaseConfig.getEntityManagerFactory().createEntityManager()) {
       em.getTransaction().begin();
-      String jpql = "DELETE FROM Person p WHERE p.location.x = :x AND p.location.y = :y AND p.location.z = :z";
-      int deletedCount = em.createQuery(jpql)
+      String findJpql = "SELECT p FROM Person p WHERE p.location.x = :x AND p.location.y = :y AND p.location.z = :z ORDER BY p.id";
+      List<Person> people = em.createQuery(findJpql, Person.class)
         .setParameter("x", location.getX())
         .setParameter("y", location.getY())
         .setParameter("z", location.getZ())
-        .executeUpdate();
+        .setMaxResults(1)
+        .getResultList();
+
+      int deletedCount = 0;
+      if (!people.isEmpty()) {
+        em.remove(people.get(0));
+        deletedCount = 1;
+      }
+
       em.getTransaction().commit();
       return deletedCount;
     }

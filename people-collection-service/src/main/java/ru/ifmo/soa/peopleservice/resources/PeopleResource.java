@@ -2,6 +2,7 @@ package ru.ifmo.soa.peopleservice.resources;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import ru.ifmo.soa.peopleservice.entities.Coordinates;
 import ru.ifmo.soa.peopleservice.entities.Country;
 import ru.ifmo.soa.peopleservice.entities.Location;
 import ru.ifmo.soa.peopleservice.entities.Person;
@@ -40,6 +41,17 @@ public class PeopleResource {
 
   private final PersonRepository repository = new PersonRepository();
   private final ExecutorService executorService = Executors.newCachedThreadPool();
+
+  @OPTIONS
+  @Path("{path: .*}")
+  public Response options() {
+    return Response.ok()
+      .header("Access-Control-Allow-Origin", "*")
+      .header("Access-Control-Allow-Headers", "origin, content-type, accept, authorization, X-Callback-URL, X-Requested-With")
+      .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD")
+      .header("Access-Control-Max-Age", "1209600")
+      .build();
+  }
 
   @GET
   public Response getPeople(
@@ -123,10 +135,48 @@ public class PeopleResource {
       throw new SemanticException("Height must be greater than 0");
     }
 
-    if (input.getLocation() != null) {
-      if (input.getLocation().getName() != null && input.getLocation().getName().length() > 704) {
-        throw new SemanticException("Location name cannot exceed 704 characters");
-      }
+    if (input.getName() == null || input.getName().trim().isEmpty()) {
+      throw new SemanticException("Name is required and cannot be empty");
+    }
+
+    if (input.getCoordinates() == null) {
+      throw new SemanticException("Coordinates are required");
+    }
+
+    if (input.getCoordinates().getX() == null) {
+      throw new SemanticException("Coordinate x is required");
+    }
+
+    if (input.getCoordinates().getY() == null) {
+      throw new SemanticException("Coordinate y is required");
+    }
+
+    if (input.getEyeColor() == null) {
+      throw new SemanticException("Eye color is required");
+    }
+
+    if (input.getLocation() == null) {
+      throw new SemanticException("Location is required");
+    }
+
+    if (input.getLocation().getX() == null) {
+      throw new SemanticException("Location x is required");
+    }
+
+    if (input.getLocation().getY() == null) {
+      throw new SemanticException("Location y is required");
+    }
+
+    if (input.getLocation().getZ() == null) {
+      throw new SemanticException("Location z is required");
+    }
+
+    if (input.getHeight() != null && input.getHeight() <= 0) {
+      throw new SemanticException("Height must be greater than 0");
+    }
+
+    if (input.getLocation().getName() != null && input.getLocation().getName().length() > 704) {
+      throw new SemanticException("Location name cannot exceed 704 characters");
     }
   }
 
@@ -233,6 +283,107 @@ public class PeopleResource {
         }
       }
 
+      if (updates.containsKey("coordinates")) {
+        Object coordinatesValue = updates.get("coordinates");
+        if (coordinatesValue instanceof Map) {
+          @SuppressWarnings("unchecked")
+          Map<String, Object> coordsMap = (Map<String, Object>) coordinatesValue;
+
+          Coordinates newCoords = new Coordinates();
+          if (coordsMap.containsKey("x")) {
+            Object xValue = coordsMap.get("x");
+            if (xValue instanceof Integer) {
+              newCoords.setX((Integer) xValue);
+            } else {
+              throw new SemanticException("Coordinate x must be an integer");
+            }
+          } else {
+            newCoords.setX(existingPerson.getCoordinates().getX());
+          }
+
+          if (coordsMap.containsKey("y")) {
+            Object yValue = coordsMap.get("y");
+            if (yValue instanceof Integer) {
+              newCoords.setY((Integer) yValue);
+            } else {
+              throw new SemanticException("Coordinate y must be an integer");
+            }
+          } else {
+            newCoords.setY(existingPerson.getCoordinates().getY());
+          }
+
+          existingPerson.setCoordinates(newCoords);
+        } else {
+          throw new SemanticException("Coordinates must be an object");
+        }
+      }
+
+      if (updates.containsKey("location")) {
+        Object locationValue = updates.get("location");
+        if (locationValue instanceof Map) {
+          @SuppressWarnings("unchecked")
+          Map<String, Object> locationMap = (Map<String, Object>) locationValue;
+
+          Location newLocation = new Location();
+
+          if (locationMap.containsKey("x")) {
+            Object xValue = locationMap.get("x");
+            if (xValue instanceof Integer) {
+              newLocation.setX((Integer) xValue);
+            } else {
+              throw new SemanticException("Location x must be an integer");
+            }
+          } else {
+            newLocation.setX(existingPerson.getLocation().getX());
+          }
+
+          if (locationMap.containsKey("y")) {
+            Object yValue = locationMap.get("y");
+            if (yValue instanceof Integer) {
+              newLocation.setY(((Integer) yValue).longValue());
+            } else if (yValue instanceof Long) {
+              newLocation.setY((Long) yValue);
+            } else {
+              throw new SemanticException("Location y must be an integer or long");
+            }
+          } else {
+            newLocation.setY(existingPerson.getLocation().getY());
+          }
+
+          if (locationMap.containsKey("z")) {
+            Object zValue = locationMap.get("z");
+            if (zValue instanceof Integer) {
+              newLocation.setZ((Integer) zValue);
+            } else {
+              throw new SemanticException("Location z must be an integer");
+            }
+          } else {
+            newLocation.setZ(existingPerson.getLocation().getZ());
+          }
+
+          if (locationMap.containsKey("name")) {
+            Object nameValue = locationMap.get("name");
+            if (nameValue instanceof String) {
+              String name = (String) nameValue;
+              if (name.length() > 704) {
+                throw new SemanticException("Location name cannot exceed 704 characters");
+              }
+              newLocation.setName(name);
+            } else if (nameValue == null) {
+              newLocation.setName(null);
+            } else {
+              throw new SemanticException("Location name must be a string or null");
+            }
+          } else {
+            newLocation.setName(existingPerson.getLocation().getName());
+          }
+
+          existingPerson.setLocation(newLocation);
+        } else {
+          throw new SemanticException("Location must be an object");
+        }
+      }
+
       repository.update(existingPerson);
       return Response.ok(existingPerson).build();
     } catch (IllegalArgumentException e) {
@@ -321,8 +472,14 @@ public class PeopleResource {
     @QueryParam("y") @NotNull Long y,
     @QueryParam("z") @NotNull Integer z) {
     try {
-      if (x == null || y == null || z == null) {
-        throw new BadRequestException("All location parameters (x, y, z) are required");
+      if (x == null) {
+        throw new BadRequestException("Parameter 'x' is required");
+      }
+      if (y == null) {
+        throw new BadRequestException("Parameter 'y' is required");
+      }
+      if (z == null) {
+        throw new BadRequestException("Parameter 'z' is required");
       }
       List<Person> people = repository.findWithLocationGreaterThan(x, y, z);
       long totalCount = people.size();
