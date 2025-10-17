@@ -17,14 +17,18 @@ import java.util.Map;
 
 public class SearchCallbackResource {
 
-  public static void sendResult(String callbackUrl, PeopleResponse data, CallbackError error) throws IOException {
+  public static void sendResult(String taskId, String callbackUrl, PeopleResponse data, CallbackError error) throws IOException {
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> payload = new HashMap<>();
       payload.put("correlationId", "req-" + System.currentTimeMillis());
       payload.put("timestamp", LocalDateTime.now().toString());
+
       if (error != null) {
-        payload.put("error", error);
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("code", error.code);
+        errorDetails.put("message", error.message);
+        payload.put("error", errorDetails);
       } else {
         payload.put("data", data);
       }

@@ -4,21 +4,45 @@ import ru.ifmo.soa.peopleservice.config.DatabaseConfig;
 import ru.ifmo.soa.peopleservice.entities.Country;
 import ru.ifmo.soa.peopleservice.entities.Person;
 import ru.ifmo.soa.peopleservice.exceptions.NotFoundException;
+import ru.ifmo.soa.peopleservice.exceptions.SemanticException;
 import ru.ifmo.soa.peopleservice.models.FilterCriteria;
 import ru.ifmo.soa.peopleservice.models.FilterRule;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
+import ru.ifmo.soa.peopleservice.models.PersonInput;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class PersonRepository {
 
+  private static final int MAX_STORAGE_CAPACITY = 100000;
+
   public boolean isStorageFull() {
     long count = countAll();
-    return count > 100_000;
+    return count >= MAX_STORAGE_CAPACITY;
+  }
+
+  public boolean existsSimilarPerson(PersonInput input) {
+    try (EntityManager em = DatabaseConfig.getEntityManagerFactory().createEntityManager()) {
+      CriteriaBuilder cb = em.getCriteriaBuilder();
+      CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+      Root<Person> root = cq.from(Person.class);
+
+      Predicate predicate = cb.and(
+        cb.equal(root.get("name"), input.getName()),
+        cb.equal(root.get("coordinates").get("x"), input.getCoordinates().getX()),
+        cb.equal(root.get("coordinates").get("y"), input.getCoordinates().getY()),
+        cb.equal(root.get("eyeColor"), input.getEyeColor())
+      );
+
+      cq.select(cb.count(root)).where(predicate);
+      Long count = em.createQuery(cq).getSingleResult();
+      return count > 0;
+    }
   }
 
   public List<Person> findAll(int page, int pageSize, String sortBy, String sortOrder) {
@@ -116,10 +140,14 @@ public class PersonRepository {
       return Double.valueOf(value);
     } else if (type == Boolean.class || type == boolean.class) {
       return Boolean.parseBoolean(value);
-    } else if (type == LocalDate.class) {
-      return LocalDate.parse(value);
     } else if (type == LocalDateTime.class) {
       return LocalDateTime.parse(value);
+    } else if (type.isEnum()) {
+      try {
+        return Enum.valueOf((Class<Enum>) type, value);
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Invalid enum value: " + value + " for type " + type.getSimpleName());
+      }
     }
 
     throw new IllegalArgumentException("Unsupported field type: " + type);
@@ -318,27 +346,29 @@ public class PersonRepository {
     }
   }
 
-  public void deleteByNationality(String nationality) {
+  public int deleteByNationality(Country nationality) {
     try (EntityManager em = DatabaseConfig.getEntityManagerFactory().createEntityManager()) {
       em.getTransaction().begin();
       String jpql = "DELETE FROM Person p WHERE p.nationality = :nationality";
-      em.createQuery(jpql)
-        .setParameter("nationality", Country.valueOf(nationality))
+      int deletedCount = em.createQuery(jpql)
+        .setParameter("nationality", nationality)
         .executeUpdate();
       em.getTransaction().commit();
+      return deletedCount;
     }
   }
 
-  public void deleteByLocation(ru.ifmo.soa.peopleservice.entities.Location location) {
+  public int deleteByLocation(ru.ifmo.soa.peopleservice.entities.Location location) {
     try (EntityManager em = DatabaseConfig.getEntityManagerFactory().createEntityManager()) {
       em.getTransaction().begin();
       String jpql = "DELETE FROM Person p WHERE p.location.x = :x AND p.location.y = :y AND p.location.z = :z";
-      em.createQuery(jpql)
+      int deletedCount = em.createQuery(jpql)
         .setParameter("x", location.getX())
         .setParameter("y", location.getY())
         .setParameter("z", location.getZ())
         .executeUpdate();
       em.getTransaction().commit();
+      return deletedCount;
     }
   }
 

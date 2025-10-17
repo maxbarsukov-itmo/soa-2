@@ -1,6 +1,8 @@
 package ru.ifmo.soa.peopleservice.resources;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import ru.ifmo.soa.peopleservice.entities.Country;
 import ru.ifmo.soa.peopleservice.entities.Location;
 import ru.ifmo.soa.peopleservice.entities.Person;
 import ru.ifmo.soa.peopleservice.exceptions.*;
@@ -18,7 +20,9 @@ import jakarta.ws.rs.core.UriInfo;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,6 +53,14 @@ public class PeopleResource {
       throw new BadRequestException("Invalid sortBy field: " + sortBy);
     }
 
+    if (pageSize < 0) {
+      throw new SemanticException("Page size cannot be negative");
+    }
+
+    if (page < 0) {
+      throw new SemanticException("Page number cannot be negative");
+    }
+
     try {
       List<Person> people = repository.findAll(page, pageSize, sortBy, sortOrder);
       long totalCount = repository.countAll();
@@ -69,12 +81,15 @@ public class PeopleResource {
   @POST
   public Response addPerson(@Valid PersonInput personInput) {
     try {
-      if (personInput.getHeight() != null && personInput.getHeight() <= 0) {
-        throw new SemanticException("Request contains semantic errors (e.g., invalid data for field)");
-      }
+      validatePersonInput(personInput);
+
       if (repository.isStorageFull()) {
         throw new InsufficientStorageException("Server storage capacity exceeded");
       }
+      if (repository.existsSimilarPerson(personInput)) {
+        throw new ConflictException("A person with these attributes already exists in the collection");
+      }
+
       Person person = new Person(
         personInput.getName(),
         personInput.getCoordinates(),
@@ -103,6 +118,18 @@ public class PeopleResource {
     }
   }
 
+  private void validatePersonInput(PersonInput input) {
+    if (input.getHeight() != null && input.getHeight() <= 0) {
+      throw new SemanticException("Height must be greater than 0");
+    }
+
+    if (input.getLocation() != null) {
+      if (input.getLocation().getName() != null && input.getLocation().getName().length() > 704) {
+        throw new SemanticException("Location name cannot exceed 704 characters");
+      }
+    }
+  }
+
   @GET
   @Path("/{id}")
   public Response getPerson(@PathParam("id") Long id) {
@@ -123,19 +150,89 @@ public class PeopleResource {
 
   @PATCH
   @Path("/{id}")
-  public Response updatePerson(@PathParam("id") Long id, @Valid PersonInput personInput) {
+  public Response updatePerson(@PathParam("id") Long id, Map<String, Object> updates) {
     try {
       if (id == null || id <= 0) {
-        throw new BadRequestException("Invalid ID parameter or request body");
+        throw new BadRequestException("Invalid ID parameter");
       }
+
+      if (updates == null || updates.isEmpty()) {
+        throw new BadRequestException("Update payload cannot be empty");
+      }
+
       Person existingPerson = repository.findById(id);
-      existingPerson.setName(personInput.getName());
-      existingPerson.setCoordinates(personInput.getCoordinates());
-      existingPerson.setHeight(personInput.getHeight());
-      existingPerson.setEyeColor(personInput.getEyeColor());
-      existingPerson.setHairColor(personInput.getHairColor());
-      existingPerson.setNationality(personInput.getNationality());
-      existingPerson.setLocation(personInput.getLocation());
+
+      if (updates.containsKey("name")) {
+        Object nameValue = updates.get("name");
+        if (nameValue instanceof String) {
+          String name = (String) nameValue;
+          if (name.trim().isEmpty()) {
+            throw new SemanticException("Name cannot be empty");
+          }
+          existingPerson.setName(name);
+        } else {
+          throw new SemanticException("Name must be a string");
+        }
+      }
+
+      if (updates.containsKey("height")) {
+        Object heightValue = updates.get("height");
+        if (heightValue instanceof Number) {
+          float height = ((Number) heightValue).floatValue();
+          if (height <= 0) {
+            throw new SemanticException("Height must be greater than 0");
+          }
+          existingPerson.setHeight(height);
+        } else if (heightValue == null) {
+          existingPerson.setHeight(null);
+        } else {
+          throw new SemanticException("Height must be a number");
+        }
+      }
+
+      if (updates.containsKey("eyeColor")) {
+        Object eyeColorValue = updates.get("eyeColor");
+        if (eyeColorValue instanceof String) {
+          try {
+            existingPerson.setEyeColor(ru.ifmo.soa.peopleservice.entities.EyeColor.valueOf((String) eyeColorValue));
+          } catch (IllegalArgumentException e) {
+            throw new SemanticException("Invalid eye color value: " + eyeColorValue);
+          }
+        } else {
+          throw new SemanticException("Eye color must be a string");
+        }
+      }
+
+      if (updates.containsKey("hairColor")) {
+        Object hairColorValue = updates.get("hairColor");
+        if (hairColorValue instanceof String) {
+          try {
+            existingPerson.setHairColor(ru.ifmo.soa.peopleservice.entities.HairColor.valueOf((String) hairColorValue));
+          } catch (IllegalArgumentException e) {
+            throw new SemanticException("Invalid hair color value: " + hairColorValue);
+          }
+        } else if (hairColorValue == null) {
+          existingPerson.setHairColor(null);
+        } else {
+          throw new SemanticException("Hair color must be a string or null");
+        }
+      }
+
+      if (updates.containsKey("nationality")) {
+        Object nationalityValue = updates.get("nationality");
+        if (nationalityValue instanceof String) {
+          try {
+            existingPerson.setNationality(ru.ifmo.soa.peopleservice.entities.Country.valueOf((String) nationalityValue));
+          } catch (IllegalArgumentException e) {
+            throw new SemanticException("Invalid nationality value: " + nationalityValue);
+          }
+        } else if (nationalityValue == null) {
+          existingPerson.setNationality(null);
+        } else {
+          throw new SemanticException("Nationality must be a string or null");
+        }
+      }
+
       repository.update(existingPerson);
       return Response.ok(existingPerson).build();
     } catch (IllegalArgumentException e) {
@@ -162,7 +259,8 @@ public class PeopleResource {
       if (id == null || id <= 0) {
         throw new BadRequestException("Provided ID parameter is invalid");
       }
-      repository.deleteById(id);
+      Person person = repository.findById(id);
+      repository.delete(person);
       return Response.status(Response.Status.NO_CONTENT).build();
     } catch (BadRequestException e) {
       return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse(400, e.getMessage())).build();
@@ -177,7 +275,11 @@ public class PeopleResource {
   @Path("/nationality/{nationality}")
   public Response deletePeopleByNationality(@PathParam("nationality") String nationality) {
     try {
-      repository.deleteByNationality(nationality);
+      Country country = Country.valueOf(nationality);
+      int deletedCount = repository.deleteByNationality(country);
+      if (deletedCount == 0) {
+        throw new NotFoundException("No people found with the specified nationality");
+      }
       return Response.status(Response.Status.NO_CONTENT).build();
     } catch (IllegalArgumentException e) {
       throw new BadRequestException("Provided nationality parameter is invalid");
@@ -192,7 +294,12 @@ public class PeopleResource {
   @Path("/location")
   public Response deleteOnePersonByLocation(@Valid Location location) {
     try {
-      repository.deleteByLocation(location);
+      int deletedCount = repository.deleteByLocation(location);
+
+      if (deletedCount == 0) {
+        throw new NotFoundException("No person found with the specified location");
+      }
+
       return Response.status(Response.Status.NO_CONTENT).build();
     } catch (IllegalArgumentException e) {
       throw new BadRequestException("Location data in request body is invalid or malformed");
@@ -210,12 +317,12 @@ public class PeopleResource {
   @GET
   @Path("/location/greater")
   public Response getPeopleWithLocationGreaterThan(
-    @QueryParam("x") Integer x,
-    @QueryParam("y") Long y,
-    @QueryParam("z") Integer z) {
+    @QueryParam("x") @NotNull Integer x,
+    @QueryParam("y") @NotNull Long y,
+    @QueryParam("z") @NotNull Integer z) {
     try {
       if (x == null || y == null || z == null) {
-        throw new BadRequestException("One or more location parameters are invalid");
+        throw new BadRequestException("All location parameters (x, y, z) are required");
       }
       List<Person> people = repository.findWithLocationGreaterThan(x, y, z);
       long totalCount = people.size();
@@ -245,7 +352,23 @@ public class PeopleResource {
       throw new BadRequestException("Invalid sortBy field: " + sortBy);
     }
 
+    if (pageSize < 0) {
+      throw new SemanticException("Page size cannot be negative");
+    }
+
+    if (page < 0) {
+      throw new SemanticException("Page number cannot be negative");
+    }
+
     if (callbackUrl != null) {
+      try {
+        new java.net.URL(callbackUrl).toURI();
+      } catch (Exception e) {
+        throw new BadRequestException("Invalid callback URL format");
+      }
+
+      String taskId = "task-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8);
+
       CompletableFuture.runAsync(() -> {
         try {
           List<Person> people = repository.findWithFilters(filterCriteria, page, pageSize, sortBy, sortOrder);
@@ -253,18 +376,24 @@ public class PeopleResource {
           int totalPages = pageSize == 0 ? 0 : (int) Math.ceil((double) totalCount / pageSize);
           PeopleResponse response = new PeopleResponse(people, page, pageSize, totalPages, totalCount);
 
-          SearchCallbackResource.sendResult(callbackUrl, response, null);
+          SearchCallbackResource.sendResult(taskId, callbackUrl, response, null);
         } catch (Exception e) {
           try {
-            SearchCallbackResource.sendResult(callbackUrl, null, new CallbackError(500, e.getMessage()));
+            SearchCallbackResource.sendResult(taskId, callbackUrl, null, new CallbackError(500, e.getMessage()));
           } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            System.err.println("Failed to send callback error: " + ex.getMessage());
           }
         }
       }, executorService);
 
+      AsyncSearchResponse response = new AsyncSearchResponse(
+        taskId,
+        "Search task accepted. Results will be sent to your callback URL.",
+        java.time.OffsetDateTime.now().plusMinutes(5).toString()
+      );
+
       return Response.status(Response.Status.ACCEPTED)
-        .entity(new ErrorResponse(202, "Search task accepted. Results will be sent to your callback URL."))
+        .entity(response)
         .build();
     } else {
       try {
