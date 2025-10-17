@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   postgres:
     env_file: .env
@@ -10,8 +9,6 @@ services:
       - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
     ports:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
-    networks:
-      - app-network
     volumes:
       - database_data:/var/lib/postgresql/data
 
