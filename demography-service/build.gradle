@@ -1,31 +1,32 @@
 plugins {
-    id 'java'
-    id 'war'
+  id 'java'
+  id 'war'
 }
 
 group = 'ru.ifmo.soa'
 version = '0.1.0-SNAPSHOT'
 
-sourceCompatibility = '17'
-targetCompatibility = '17'
+java {
+  sourceCompatibility = JavaVersion.VERSION_17
+  targetCompatibility = JavaVersion.VERSION_17
+}
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
   options.encoding = 'UTF-8'
-  options.compilerArgs += ['--release', '17']
+  options.release = 17
 }
 
 repositories {
-    mavenCentral()
+  mavenCentral()
 }
 
 dependencies {
-    providedCompile 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
-    providedCompile 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
-    implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
-    implementation 'com.fasterxml.jackson.core:jackson-core:2.16.1'
-    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.16.1'
+  compileOnly 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
+  compileOnly 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
+
+  implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+  implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
 }
 
 war {

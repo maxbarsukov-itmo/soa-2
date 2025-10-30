@@ -1,93 +1,78 @@
 ### Java ###
-.mtj.tmp/
+*.class
+*.jar
+*.war
+*.ear
 *.nar
+.mtj.tmp/
 hs_err_pid*
 replay_pid*
+rebel.xml
+*.db
 
-### Directories ###
-*.class
+### Build Directories ###
+/build/
+.gradle/
 target/
 libs/
 tmp/
 node_modules/
+ivy-cache/
+activemq-data/
+classes/
 
-### Package Files ###
-*.jar
-*.war
-*.ear
-*.db
-rebel.xml
-
-### Gradle ###
-.gradle
-.gradletasknamecache
-gradle-app.setting
-build/
-buildSrc/build
-/spring-*/build
-/framework-*/build
-/integration-tests/build
-/src/asciidoc/build
-spring-test/test-output/
-!gradle-wrapper.jar
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### IntelliJ IDEA ###
-.idea
-.idea_modules
-*.iws
+### IDEs ###
+/.idea/
 *.iml
+*.iws
 *.ipr
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-
-### NetBeans ###
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+.sts4-cache
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-
-### VS Code ###
 .vscode/
-.code-workspace
+*.code-workspace
 
-### Log files ###
+### Gradle ###
+.gradletasknamecache
+gradle-app.setting
+buildSrc/build/
+/spring-*/build/
+/framework-*/build/
+/integration-tests/build/
+/src/asciidoc/build/
+spring-test/test-output/
+
+!**/src/main/**/build/
+!**/src/test/**/build/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Logs & OS ###
 jxl.log
 jmx.log
 derby.log
-
-### OS Files ###
 .DS_Store
 Thumbs.db
 Desktop.ini
 .svn
 ._*
 
-### Env ###
+### Env & Misc ###
 .env
 .env.production
-
-### Misc ###
 *.java.hsp
 *.sonarj
 *.sw*
-ivy-cache
 argfile*
-activemq-data/
-classes/
 .wakatime-project

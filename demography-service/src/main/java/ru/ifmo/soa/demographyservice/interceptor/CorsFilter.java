@@ -1,4 +1,4 @@
-package ru.ifmo.soa.demographyservice.filters;
+package ru.ifmo.soa.demographyservice.interceptor;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerResponseContext;
