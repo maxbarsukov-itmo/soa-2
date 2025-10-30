@@ -3,15 +3,15 @@ package ru.ifmo.soa.demographyservice.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import ru.ifmo.soa.demographyservice.client.model.PeopleSearchRequest;
-import ru.ifmo.soa.demographyservice.config.qualifier.*;
+import ru.ifmo.soa.demographyservice.config.qualifier.BaseUrl;
 import ru.ifmo.soa.demographyservice.dto.PeopleResponseDto;
 
 import java.io.IOException;

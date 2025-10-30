@@ -2,8 +2,7 @@ package ru.ifmo.soa.demographyservice.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-
-import ru.ifmo.soa.demographyservice.client.PeopleApiClient;
+import ru.ifmo.soa.demographyservice.client.PeopleClient;
 import ru.ifmo.soa.demographyservice.exception.NotFoundException;
 import ru.ifmo.soa.demographyservice.model.DemographyField;
 import ru.ifmo.soa.demographyservice.model.EyeColor;
@@ -17,7 +16,7 @@ import java.util.function.BiFunction;
 public class DemographyService {
 
   @Inject
-  private PeopleApiClient peopleClient;
+  private PeopleClient peopleClient;
 
   @Inject
   private ValidationService validationService;
