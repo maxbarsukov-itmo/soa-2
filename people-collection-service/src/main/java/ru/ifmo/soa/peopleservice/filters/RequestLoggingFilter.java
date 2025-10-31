@@ -6,6 +6,7 @@ import jakarta.ws.rs.container.ContainerResponseContext;
 import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,10 +14,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
-import ru.ifmo.soa.peopleservice.models.ErrorResponse;
+import ru.ifmo.soa.peopleservice.dto.ErrorResponseDto;
 
 @Provider
 public class RequestLoggingFilter implements ContainerRequestFilter, ContainerResponseFilter {
+  private static final boolean RATE_LIMIT_ENABLED = !Boolean.parseBoolean(System.getProperty("api.rate.limit.disabled", "false"));
+
   private static final long MAX_REQUESTS_PER_MINUTE = 100;
   private static final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
 
@@ -27,7 +30,7 @@ public class RequestLoggingFilter implements ContainerRequestFilter, ContainerRe
 
   @Override
   public void filter(ContainerRequestContext requestContext) throws IOException {
-    if ("OPTIONS".equals(requestContext.getMethod())) {
+    if (!RATE_LIMIT_ENABLED || "OPTIONS".equals(requestContext.getMethod())) {
       return;
     }
 
@@ -36,10 +39,9 @@ public class RequestLoggingFilter implements ContainerRequestFilter, ContainerRe
       clientIP = requestContext.getUriInfo().getRequestUri().getHost();
     }
     Bucket bucket = buckets.computeIfAbsent(clientIP, k -> createNewBucket());
-
     if (!bucket.tryConsume(1)) {
       requestContext.abortWith(Response.status(jakarta.ws.rs.core.Response.Status.TOO_MANY_REQUESTS)
-        .entity(new ErrorResponse(429, "Rate limit exceeded. Please try again later."))
+        .entity(new ErrorResponseDto(429, "Rate limit exceeded. Please try again later."))
         .build());
     }
   }

@@ -1,10 +1,8 @@
-package ru.ifmo.soa.peopleservice.entities;
+package ru.ifmo.soa.peopleservice.dto;
 
-import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotNull;
 
-@Embeddable
-public class Location {
+public class LocationDto {
   @NotNull
   private Integer x;
   @NotNull
@@ -13,10 +11,10 @@ public class Location {
   private Integer z;
   private String name;
 
-  public Location() {
+  public LocationDto() {
   }
 
-  public Location(Integer x, Long y, Integer z, String name) {
+  public LocationDto(Integer x, Long y, Integer z, String name) {
     this.x = x;
     this.y = y;
     this.z = z;

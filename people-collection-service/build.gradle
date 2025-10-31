@@ -1,6 +1,6 @@
 plugins {
-    id 'java'
-    id 'war'
+  id 'java'
+  id 'war'
 }
 
 group = 'ru.ifmo.soa'
@@ -15,31 +15,25 @@ tasks.withType(JavaCompile) {
 }
 
 repositories {
-    mavenCentral()
+  mavenCentral()
 }
 
 dependencies {
-    implementation 'org.hibernate:hibernate-core:6.2.7.Final'
-    implementation 'org.postgresql:postgresql:42.6.0'
-    providedCompile 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
-    providedCompile 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
-    implementation 'com.fasterxml.jackson.core:jackson-core:2.16.1'
-    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.16.1'
-    implementation 'org.hibernate:hibernate-jpamodelgen:6.2.7.Final'
-    implementation 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
-    implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
-    implementation 'org.eclipse:yasson:3.0.3'
-    implementation 'org.eclipse.parsson:parsson:1.1.4'
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
-    implementation 'com.bucket4j:bucket4j:8.10.1'
-    implementation 'com.bucket4j:bucket4j_jdk17-core:8.15.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
-}
-
-test {
-    useJUnitPlatform()
+  compileOnly 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
+  compileOnly 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
+  implementation 'org.hibernate:hibernate-core:6.2.7.Final'
+  implementation 'org.postgresql:postgresql:42.6.0'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
+  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0'
+  implementation 'com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider:2.20.0'
+  implementation 'org.hibernate:hibernate-jpamodelgen:6.2.7.Final'
+  implementation 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
+  implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+  implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+  implementation 'com.bucket4j:bucket4j:8.10.1'
+  implementation 'com.bucket4j:bucket4j_jdk17-core:8.15.0'
+  implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+  annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
 }
 
 war {

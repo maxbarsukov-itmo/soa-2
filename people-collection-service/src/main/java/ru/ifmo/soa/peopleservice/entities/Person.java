@@ -2,7 +2,8 @@ package ru.ifmo.soa.peopleservice.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalDateTime;
+
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "people")
@@ -10,31 +11,34 @@ public class Person {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-
   @NotNull
   private String name;
-
   @Embedded
+  @AttributeOverrides({
+    @AttributeOverride(name = "x", column = @Column(name = "coordinates_x")),
+    @AttributeOverride(name = "y", column = @Column(name = "coordinates_y"))
+  })
   private Coordinates coordinates;
-
   @Column(name = "creation_date", nullable = false, updatable = false)
-  private LocalDateTime creationDate;
-
+  private OffsetDateTime creationDate;
   private Float height;
-
   @Enumerated(EnumType.STRING)
   private EyeColor eyeColor;
-
   @Enumerated(EnumType.STRING)
   private HairColor hairColor;
-
   @Enumerated(EnumType.STRING)
   private Country nationality;
-
   @Embedded
+  @AttributeOverrides({
+    @AttributeOverride(name = "x", column = @Column(name = "location_x")),
+    @AttributeOverride(name = "y", column = @Column(name = "location_y")),
+    @AttributeOverride(name = "z", column = @Column(name = "location_z")),
+    @AttributeOverride(name = "name", column = @Column(name = "location_name"))
+  })
   private Location location;
 
-  public Person() {}
+  public Person() {
+  }
 
   public Person(String name, Coordinates coordinates, Float height, EyeColor eyeColor, HairColor hairColor, Country nationality, Location location) {
     this.name = name;
@@ -44,7 +48,7 @@ public class Person {
     this.hairColor = hairColor;
     this.nationality = nationality;
     this.location = location;
-    this.creationDate = LocalDateTime.now();
+    this.creationDate = OffsetDateTime.now();
   }
 
   public Long getId() {
@@ -71,11 +75,11 @@ public class Person {
     this.coordinates = coordinates;
   }
 
-  public LocalDateTime getCreationDate() {
+  public OffsetDateTime getCreationDate() {
     return creationDate;
   }
 
-  public void setCreationDate(LocalDateTime creationDate) {
+  public void setCreationDate(OffsetDateTime creationDate) {
     this.creationDate = creationDate;
   }
 

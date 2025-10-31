@@ -1,19 +1,17 @@
-package ru.ifmo.soa.peopleservice.entities;
+package ru.ifmo.soa.peopleservice.dto;
 
-import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotNull;
 
-@Embeddable
-public class Coordinates {
+public class CoordinatesDto {
   @NotNull
   private Integer x;
   @NotNull
   private Integer y;
 
-  public Coordinates() {
+  public CoordinatesDto() {
   }
 
-  public Coordinates(Integer x, Integer y) {
+  public CoordinatesDto(Integer x, Integer y) {
     this.x = x;
     this.y = y;
   }

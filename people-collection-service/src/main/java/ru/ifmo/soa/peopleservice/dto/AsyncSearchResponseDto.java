@@ -1,11 +1,11 @@
-package ru.ifmo.soa.peopleservice.models;
+package ru.ifmo.soa.peopleservice.dto;
 
-public class AsyncSearchResponse {
+public class AsyncSearchResponseDto {
   private String taskId;
   private String message;
   private String estimatedCompletion;
 
-  public AsyncSearchResponse(String taskId, String message, String estimatedCompletion) {
+  public AsyncSearchResponseDto(String taskId, String message, String estimatedCompletion) {
     this.taskId = taskId;
     this.message = message;
     this.estimatedCompletion = estimatedCompletion;
