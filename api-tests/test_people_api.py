@@ -174,7 +174,7 @@ def test_post_person_wrong_content_type():
     assert_error(resp, 415)
 
 def test_post_person_too_large():
-    huge_name = "A" * (20 * 1024 * 1024) # 20 MiB
+    huge_name = "A" * (2 * 1024 * 1024) # 2 MiB
     payload = {
         "name": huge_name,
         "coordinates": {"x": 0, "y": 0},

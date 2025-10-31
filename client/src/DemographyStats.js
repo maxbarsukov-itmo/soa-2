@@ -3,8 +3,7 @@ import { Container, Row, Col, Card, Button, Table } from 'react-bootstrap';
 import axios from 'axios';
 import ErrorHandler from './ErrorHandler';
 
-// FIXME https
-const DEMOGRAPHY_SERVICE_URL = 'http://localhost:51312/api/v1';
+const DEMOGRAPHY_SERVICE_URL = 'https://localhost:51312/api/v1';
 
 const DemographyStats = () => {
   const [hairColorStats, setHairColorStats] = useState([]);

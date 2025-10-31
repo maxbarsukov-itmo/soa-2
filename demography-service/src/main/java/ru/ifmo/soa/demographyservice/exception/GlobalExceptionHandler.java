@@ -16,7 +16,7 @@ public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
     } else if (ex instanceof NotFoundException notFound) {
       return errorResponse(404, notFound.getMessage());
     } else {
-      return errorResponse(500, "Internal server error");
+      return errorResponse(500, ex.getMessage());
     }
   }
 

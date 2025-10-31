@@ -3,8 +3,7 @@ import { Container, Row, Col, Card, Form, Button, Table, Alert } from 'react-boo
 import axios from 'axios';
 import ErrorHandler from './ErrorHandler';
 
-// FIXME https
-const PEOPLE_SERVICE_URL = 'http://localhost:51313/api/v1';
+const PEOPLE_SERVICE_URL = 'https://localhost:51313/api/v1';
 
 const LocationComparison = () => {
   const [comparisonCoords, setComparisonCoords] = useState({ x: null, y: null, z: null });

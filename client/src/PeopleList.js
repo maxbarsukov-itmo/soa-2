@@ -5,8 +5,7 @@ import PersonForm from './PersonForm';
 import ErrorHandler from './ErrorHandler';
 import { Link } from 'react-router-dom';
 
-// FIXME https
-const PEOPLE_SERVICE_URL = 'http://localhost:51313/api/v1';
+const PEOPLE_SERVICE_URL = 'https://localhost:51313/api/v1';
 
 const PeopleList = () => {
   const [people, setPeople] = useState([]);

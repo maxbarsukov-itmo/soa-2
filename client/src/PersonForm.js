@@ -3,8 +3,7 @@ import { Form, Button, Row, Col } from 'react-bootstrap';
 import axios from 'axios';
 import ErrorHandler from './ErrorHandler';
 
-// FIXME https
-const PEOPLE_SERVICE_URL = 'http://localhost:51313/api/v1';
+const PEOPLE_SERVICE_URL = 'https://localhost:51313/api/v1';
 
 const PersonForm = ({ person, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
