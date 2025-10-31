@@ -1,6 +1,6 @@
 package ru.ifmo.soa.demographyservice.config;
 
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
@@ -8,7 +8,7 @@ import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.core5.util.Timeout;
 import ru.ifmo.soa.demographyservice.config.qualifier.*;
 
-@ApplicationScoped
+@Dependent
 public class HttpClientConfig {
 
   private final int connectTimeoutSec;

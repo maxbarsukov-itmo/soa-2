@@ -24,11 +24,6 @@ public class ApplicationConfig {
     return defaultValue;
   }
 
-  @Produces
-  public ObjectMapper produceObjectMapper() {
-    return new ObjectMapper();
-  }
-
   @Produces @BaseUrl
   public String producePeopleServiceBaseUrl() {
     return peopleServiceBaseUrl != null ? peopleServiceBaseUrl : "https://localhost:51313/api/v1";
