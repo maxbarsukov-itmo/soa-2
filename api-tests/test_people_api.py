@@ -8,7 +8,7 @@ from models import (
 )
 from callback_server import start_callback_server, get_callback_result
 
-BASE_URL = pytest.BASE_URL
+BASE_URL = pytest.PEOPLE_URL
 
 def assert_error(response, status_code: int):
     assert response.status_code == status_code
