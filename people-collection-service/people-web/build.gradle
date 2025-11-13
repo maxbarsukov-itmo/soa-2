@@ -1,0 +1,26 @@
+plugins {
+  id 'java'
+  id 'war'
+}
+
+dependencies {
+  compileOnly 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
+  compileOnly 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
+  implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+
+  implementation project(':people-ejb')
+
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
+  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0'
+  implementation 'com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider:2.20.0'
+
+  implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+  implementation 'com.bucket4j:bucket4j:8.10.1'
+  implementation 'com.bucket4j:bucket4j_jdk17-core:8.15.0'
+}
+
+war {
+  archiveFileName = 'people-web.war'
+  dependsOn ':people-ejb:jar'
+  rootSpec.exclude('**/people-ejb.jar')
+}

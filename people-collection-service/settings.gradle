@@ -1,1 +1,4 @@
 rootProject.name = 'people-collection-service'
+
+include 'people-ejb'
+include 'people-web'

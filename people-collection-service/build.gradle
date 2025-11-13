@@ -3,39 +3,23 @@ plugins {
   id 'war'
 }
 
-group = 'ru.ifmo.soa'
-version = '0.1.0-SNAPSHOT'
+allprojects {
+  group = 'ru.ifmo.soa'
+  version = '0.1.0-SNAPSHOT'
 
-sourceCompatibility = '17'
-targetCompatibility = '17'
-
-tasks.withType(JavaCompile) {
-  options.encoding = 'UTF-8'
-  options.compilerArgs += ['--release', '17']
+  java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+  }
 }
 
-repositories {
-  mavenCentral()
-}
+subprojects {
+  repositories {
+    mavenCentral()
+  }
 
-dependencies {
-  compileOnly 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
-  compileOnly 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
-  implementation 'org.hibernate:hibernate-core:6.2.7.Final'
-  implementation 'org.postgresql:postgresql:42.6.0'
-  implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
-  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0'
-  implementation 'com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider:2.20.0'
-  implementation 'org.hibernate:hibernate-jpamodelgen:6.2.7.Final'
-  implementation 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
-  implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
-  implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
-  implementation 'com.bucket4j:bucket4j:8.10.1'
-  implementation 'com.bucket4j:bucket4j_jdk17-core:8.15.0'
-  implementation 'org.mapstruct:mapstruct:1.5.5.Final'
-  annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
-}
-
-war {
-  archiveFileName = 'people-collection-service.war'
+  tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+  }
 }
