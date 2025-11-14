@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap'
 import axios from 'axios';
 import ErrorHandler from './ErrorHandler';
 
-const PEOPLE_SERVICE_URL = 'https://localhost:51313/api/v1';
+const PEOPLE_SERVICE_URL = 'http://localhost:8765/api/v1';
 
 const DeleteByLocation = () => {
   const [location, setLocation] = useState({ x: null, y: null, z: null });

@@ -5,7 +5,7 @@ import PersonForm from './PersonForm';
 import ErrorHandler from './ErrorHandler';
 import { Link } from 'react-router-dom';
 
-const PEOPLE_SERVICE_URL = 'https://localhost:51313/api/v1';
+const PEOPLE_SERVICE_URL = 'http://localhost:8765/api/v1';
 
 const PeopleList = () => {
   const [people, setPeople] = useState([]);
