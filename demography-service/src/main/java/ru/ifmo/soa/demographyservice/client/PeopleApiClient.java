@@ -1,70 +1,37 @@
 package ru.ifmo.soa.demographyservice.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.HttpStatus;
-import org.apache.hc.core5.http.io.HttpClientResponseHandler;
-import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 import ru.ifmo.soa.demographyservice.client.model.PeopleSearchRequest;
 import ru.ifmo.soa.demographyservice.dto.PeopleResponseDto;
-
-import java.io.IOException;
-import java.util.List;
 
 @Component
 public class PeopleApiClient implements PeopleClient {
 
-  private static final String GET_PEOPLE = "/people?page=0&pageSize=1";
-  private static final String SEARCH_PEOPLE = "/people/search?page=0&pageSize=1";
+  private static final String BASE_URL = "https://people-service/api/v1";
+  private static final String GET_PEOPLE = BASE_URL + "/people?page=0&pageSize=1";
+  private static final String SEARCH_PEOPLE = BASE_URL + "/people/search?page=0&pageSize=1";
 
-  private final String baseUrl;
-  private final CloseableHttpClient httpClient;
-  private final ObjectMapper mapper;
-  private final HttpClientResponseHandler<PeopleResponseDto> responseHandler;
+  private final RestTemplate restTemplate;
 
-  public PeopleApiClient(
-    @Value("${people.service.url}") String baseUrl,
-    CloseableHttpClient httpClient,
-    ObjectMapper mapper
-  ) {
-    this.baseUrl = baseUrl;
-    this.httpClient = httpClient;
-    this.mapper = mapper;
-    this.responseHandler = createResponseHandler();
+  public PeopleApiClient(RestTemplate restTemplate) {
+    this.restTemplate = restTemplate;
   }
 
-  private HttpClientResponseHandler<PeopleResponseDto> createResponseHandler() {
-    return response -> {
-      if (response.getCode() != HttpStatus.SC_OK) {
-        throw new IOException("Request to People API failed: HTTP " + response.getCode());
-      }
-      return mapper.readValue(response.getEntity().getContent(), PeopleResponseDto.class);
-    };
-  }
-
-  public long getTotalCount() throws IOException {
-    HttpGet request = new HttpGet(baseUrl + GET_PEOPLE);
-    PeopleResponseDto dto = httpClient.execute(request, responseHandler);
-    return dto.totalCount() != null ? dto.totalCount() : 0L;
-  }
-
-  public long getCountByField(String field, String value) throws IOException {
+  public long getCountByField(String field, String value) {
     var request = new PeopleSearchRequest(
-      List.of(new PeopleSearchRequest.FilterRule(field, "eq", value))
+      java.util.List.of(new PeopleSearchRequest.FilterRule(field, "eq", value))
     );
 
-    String json = mapper.writeValueAsString(request);
+    var response = restTemplate.postForObject(SEARCH_PEOPLE, request, PeopleResponseDto.class);
+    return response != null ? response.totalCount() : 0L;
+  }
 
-    HttpPost post = new HttpPost(baseUrl + SEARCH_PEOPLE);
-    post.setHeader("Content-Type", ContentType.APPLICATION_JSON.toString());
-    post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
-
-    PeopleResponseDto dto = httpClient.execute(post, responseHandler);
-    return dto.totalCount() != null ? dto.totalCount() : 0L;
+  public long getTotalCount() {
+    var response = restTemplate.getForObject(GET_PEOPLE, PeopleResponseDto.class);
+    return response != null ? response.totalCount() : 0L;
   }
 }

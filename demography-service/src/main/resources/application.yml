@@ -1,6 +1,29 @@
-people:
-  service:
-    url: ${PEOPLE_SERVICE_URL:https://localhost:51313/api/v1}
+spring:
+  application:
+    name: demography-service
+
+consul:
+  host: ${CONSUL_HOST}
+  port: ${CONSUL_PORT}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.uuid}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
 
 http-client:
   connect-timeout: ${HTTP_CLIENT_CONNECT_TIMEOUT:5}
@@ -10,6 +33,8 @@ http-client:
 
 server:
   port: 51312
+  http:
+    port: 8081
   ssl:
     key-store: classpath:ssl/demography.keystore
     key-store-password: secret
