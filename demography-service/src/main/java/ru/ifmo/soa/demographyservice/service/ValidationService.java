@@ -1,9 +1,9 @@
 package ru.ifmo.soa.demographyservice.service;
 
-import jakarta.enterprise.context.ApplicationScoped;
+import org.springframework.stereotype.Service;
 import ru.ifmo.soa.demographyservice.exception.BadRequestException;
 
-@ApplicationScoped
+@Service
 public class ValidationService {
 
   public <T extends Enum<T>> T validateEnum(Class<T> enumClass, String value, String fieldName) {

@@ -1,7 +1,6 @@
 package ru.ifmo.soa.demographyservice.service;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
+import org.springframework.stereotype.Service;
 import ru.ifmo.soa.demographyservice.client.PeopleClient;
 import ru.ifmo.soa.demographyservice.exception.NotFoundException;
 import ru.ifmo.soa.demographyservice.model.DemographyField;
@@ -12,14 +11,16 @@ import ru.ifmo.soa.demographyservice.util.ThrowingSupplier;
 import java.io.IOException;
 import java.util.function.BiFunction;
 
-@ApplicationScoped
+@Service
 public class DemographyService {
 
-  @Inject
-  private PeopleClient peopleClient;
+  private final PeopleClient peopleClient;
+  private final ValidationService validationService;
 
-  @Inject
-  private ValidationService validationService;
+  public DemographyService(PeopleClient peopleClient, ValidationService validationService) {
+    this.peopleClient = peopleClient;
+    this.validationService = validationService;
+  }
 
   public double getHairColorPercentage(String hairColorStr) {
     var color = validationService.validateEnum(HairColor.class, hairColorStr, DemographyField.HAIR_COLOR.apiName);
@@ -46,7 +47,8 @@ public class DemographyService {
       long count = countSupplier.get();
       return resultMapper.apply(count, total);
     } catch (IOException e) {
-      throw new RuntimeException("Failed to fetch demographic data", e);
+      // FIXME
+      throw new RuntimeException(e);
     }
   }
 }

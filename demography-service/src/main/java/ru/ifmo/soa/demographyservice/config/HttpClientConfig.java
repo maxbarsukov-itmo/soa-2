@@ -1,49 +1,49 @@
 package ru.ifmo.soa.demographyservice.config;
 
-import jakarta.enterprise.context.Dependent;
-import jakarta.inject.Inject;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.core5.util.Timeout;
-import ru.ifmo.soa.demographyservice.config.qualifier.*;
 
-@Dependent
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
 public class HttpClientConfig {
 
-  private final int connectTimeoutSec;
-  private final int responseTimeoutSec;
-  private final int maxTotal;
-  private final int maxPerRoute;
+  @Value("${http-client.connect-timeout:5}")
+  private int connectTimeoutSec;
 
-  @Inject
-  public HttpClientConfig(
-    @ConnectTimeoutSec Integer connectTimeoutSec,
-    @ResponseTimeoutSec Integer responseTimeoutSec,
-    @HttpClientMaxTotal Integer maxTotal,
-    @HttpClientMaxPerRoute Integer maxPerRoute
-  ) {
-    this.connectTimeoutSec = connectTimeoutSec;
-    this.responseTimeoutSec = responseTimeoutSec;
-    this.maxTotal = maxTotal;
-    this.maxPerRoute = maxPerRoute;
-  }
+  @Value("${http-client.response-timeout:10}")
+  private int responseTimeoutSec;
 
-  public RequestConfig createRequestConfig() {
-    return RequestConfig.custom()
-      .setResponseTimeout(Timeout.ofSeconds(responseTimeoutSec))
-      .build();
-  }
+  @Value("${http-client.max-total:10}")
+  private int maxTotal;
 
-  public PoolingHttpClientConnectionManager createConnectionManager() {
-    ConnectionConfig connectionConfig = ConnectionConfig.custom()
+  @Value("${http-client.max-per-route:5}")
+  private int maxPerRoute;
+
+  @Bean
+  public CloseableHttpClient httpClient() {
+    ConnectionConfig connConfig = ConnectionConfig.custom()
       .setConnectTimeout(Timeout.ofSeconds(connectTimeoutSec))
       .build();
 
     PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
-    connManager.setDefaultConnectionConfig(connectionConfig);
+    connManager.setDefaultConnectionConfig(connConfig);
     connManager.setMaxTotal(maxTotal);
     connManager.setDefaultMaxPerRoute(maxPerRoute);
-    return connManager;
+
+    RequestConfig requestConfig = RequestConfig.custom()
+      .setResponseTimeout(Timeout.ofSeconds(responseTimeoutSec))
+      .build();
+
+    return HttpClients.custom()
+      .setConnectionManager(connManager)
+      .setDefaultRequestConfig(requestConfig)
+      .build();
   }
 }

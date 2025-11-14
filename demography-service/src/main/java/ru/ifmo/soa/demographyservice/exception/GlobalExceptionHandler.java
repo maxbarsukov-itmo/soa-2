@@ -1,29 +1,26 @@
 package ru.ifmo.soa.demographyservice.exception;
 
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.ExceptionMapper;
-import jakarta.ws.rs.ext.Provider;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.ifmo.soa.demographyservice.dto.ErrorDto;
 
-@Provider
-public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
+@RestControllerAdvice
+public class GlobalExceptionHandler {
 
-  @Override
-  public Response toResponse(Exception ex) {
-    if (ex instanceof BadRequestException badRequest) {
-      return errorResponse(400, badRequest.getMessage());
-    } else if (ex instanceof NotFoundException notFound) {
-      return errorResponse(404, notFound.getMessage());
-    } else {
-      return errorResponse(500, ex.getMessage());
-    }
+  @ExceptionHandler(BadRequestException.class)
+  public ResponseEntity<ErrorDto> handleBadRequest(BadRequestException ex) {
+    return ResponseEntity.badRequest().body(new ErrorDto(400, ex.getMessage()));
   }
 
-  private Response errorResponse(int status, String message) {
-    return Response.status(status)
-      .type(MediaType.APPLICATION_JSON)
-      .entity(new ErrorDto(status, message))
-      .build();
+  @ExceptionHandler(NotFoundException.class)
+  public ResponseEntity<ErrorDto> handleNotFound(NotFoundException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorDto(404, ex.getMessage()));
+  }
+
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorDto> handleGeneric(Exception ex) {
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorDto(500, ex.getMessage()));
   }
 }

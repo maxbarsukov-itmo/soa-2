@@ -1,0 +1,29 @@
+people:
+  service:
+    url: ${PEOPLE_SERVICE_URL:https://localhost:51313/api/v1}
+
+http-client:
+  connect-timeout: ${HTTP_CLIENT_CONNECT_TIMEOUT:5}
+  response-timeout: ${HTTP_CLIENT_RESPONSE_TIMEOUT:10}
+  max-total: ${HTTP_CLIENT_MAX_TOTAL:10}
+  max-per-route: ${HTTP_CLIENT_MAX_PER_ROUTE:5}
+
+server:
+  port: 51312
+  ssl:
+    key-store: classpath:ssl/demography.keystore
+    key-store-password: secret
+    key-store-type: JKS
+    key-alias: wildfly
+    key-password: secret
+    trust-store: classpath:ssl/demography-truststore.jks
+    trust-store-password: changeit
+    trust-store-type: JKS
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+
+logging:
+  level:
+    ru.ifmo.soa: DEBUG

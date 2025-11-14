@@ -1,6 +1,7 @@
 plugins {
   id 'java'
-  id 'war'
+  id 'org.springframework.boot' version '3.2.5'
+  id 'io.spring.dependency-management' version '1.1.4'
 }
 
 group = 'ru.ifmo.soa'
@@ -21,15 +22,17 @@ repositories {
 }
 
 dependencies {
-  compileOnly 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
-  compileOnly 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
-
-  implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
-  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0'
-  implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-validation'
   implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0'
 }
 
-war {
-  archiveFileName = 'demography-service.war'
+bootRun {
+  jvmArgs = [
+    "-Djavax.net.ssl.keyStore=./src/main/resources/ssl/demography.keystore",
+    "-Djavax.net.ssl.keyStorePassword=secret",
+    "-Djavax.net.ssl.trustStore=./src/main/resources/ssl/demography-truststore.jks",
+    "-Djavax.net.ssl.trustStorePassword=changeit"
+  ]
 }
