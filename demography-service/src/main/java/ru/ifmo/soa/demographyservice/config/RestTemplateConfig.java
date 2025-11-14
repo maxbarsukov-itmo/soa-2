@@ -5,9 +5,6 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
-import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
-import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,9 +19,6 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
-import javax.net.ssl.SSLContext;
-import java.io.InputStream;
-import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,46 +44,26 @@ public class RestTemplateConfig {
   @Bean
   public RestTemplate restTemplate() {
     try {
-      try (InputStream ts = getClass().getClassLoader().getResourceAsStream("ssl/demography-truststore.jks")) {
-        if (ts == null) {
-          throw new RuntimeException("demography-truststore.jks not found in classpath");
-        }
-        KeyStore trustStore = KeyStore.getInstance("JKS");
-        trustStore.load(ts, "changeit".toCharArray());
+      CloseableHttpClient httpClient = HttpClients.custom().build();
 
-        SSLContext sslContext = SSLContextBuilder.create()
-          .loadTrustMaterial(trustStore, null)
-          .build();
+      HttpComponentsClientHttpRequestFactory requestFactory =
+        new HttpComponentsClientHttpRequestFactory(httpClient);
 
-        SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
+      MappingJackson2HttpMessageConverter jsonConverter = new MappingJackson2HttpMessageConverter();
+      jsonConverter.setObjectMapper(objectMapper);
+      List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
+      messageConverters.add(jsonConverter);
+      messageConverters.add(new StringHttpMessageConverter());
 
-        var connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
-          .setSSLSocketFactory(sslSocketFactory)
-          .build();
+      List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
+      interceptors.add(new HeaderRequestInterceptor(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
 
-        CloseableHttpClient httpClient = HttpClients.custom()
-          .setConnectionManager(connectionManager)
-          .build();
-
-        HttpComponentsClientHttpRequestFactory requestFactory =
-          new HttpComponentsClientHttpRequestFactory(httpClient);
-
-        MappingJackson2HttpMessageConverter jsonConverter = new MappingJackson2HttpMessageConverter();
-        jsonConverter.setObjectMapper(objectMapper);
-        List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
-        messageConverters.add(jsonConverter);
-        messageConverters.add(new StringHttpMessageConverter());
-
-        List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
-        interceptors.add(new HeaderRequestInterceptor(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
-
-        RestTemplate restTemplate = new RestTemplate(requestFactory);
-        restTemplate.setMessageConverters(messageConverters);
-        restTemplate.setInterceptors(interceptors);
-        return restTemplate;
-      }
+      RestTemplate restTemplate = new RestTemplate(requestFactory);
+      restTemplate.setMessageConverters(messageConverters);
+      restTemplate.setInterceptors(interceptors);
+      return restTemplate;
     } catch (Exception e) {
-      throw new RuntimeException("Failed to create HTTPS-enabled LoadBalanced RestTemplate", e);
+      throw new RuntimeException("Failed to create LoadBalanced RestTemplate", e);
     }
   }
 }

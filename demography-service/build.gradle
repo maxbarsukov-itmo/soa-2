@@ -40,12 +40,3 @@ dependencies {
   implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
   implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
 }
-
-bootRun {
-  jvmArgs = [
-    "-Djavax.net.ssl.keyStore=./src/main/resources/ssl/demography.keystore",
-    "-Djavax.net.ssl.keyStorePassword=secret",
-    "-Djavax.net.ssl.trustStore=./src/main/resources/ssl/demography-truststore.jks",
-    "-Djavax.net.ssl.trustStorePassword=changeit"
-  ]
-}

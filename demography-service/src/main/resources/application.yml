@@ -32,18 +32,7 @@ http-client:
   max-per-route: ${HTTP_CLIENT_MAX_PER_ROUTE:5}
 
 server:
-  port: 51312
-  http:
-    port: 8081
-  ssl:
-    key-store: classpath:ssl/demography.keystore
-    key-store-password: secret
-    key-store-type: JKS
-    key-alias: wildfly
-    key-password: secret
-    trust-store: classpath:ssl/demography-truststore.jks
-    trust-store-password: changeit
-    trust-store-type: JKS
+  port: 8081
   error:
     include-message: always
     include-binding-errors: always
