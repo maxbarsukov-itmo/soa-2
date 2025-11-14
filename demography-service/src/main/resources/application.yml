@@ -32,9 +32,9 @@ http-client:
   max-per-route: ${HTTP_CLIENT_MAX_PER_ROUTE:5}
 
 server:
-  port: 8081
+  port: 51312
   http:
-    port: 51312
+    port: 8081
   ssl:
     key-store: classpath:ssl/demography.keystore
     key-store-password: secret
