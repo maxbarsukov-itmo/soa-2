@@ -1,6 +1,10 @@
 # People Service
 
 ```bash
+cp .env.example .env
+```
+
+```bash
 ./gradlew clean build
 
 cp people-ejb/build/libs/people-ejb.jar $WILDFLY_HOME/standalone/deployments/
@@ -8,7 +12,6 @@ cp people-web/build/libs/people-web.war $WILDFLY_HOME/standalone/deployments/
 ```
 
 ```bash
-cd ..
 export $(cat .env | xargs)
 docker compose up
 ```
@@ -16,13 +19,14 @@ docker compose up
 Для тестов в [`api-tests`](../api-tests) выключаем Rate Limit:
 
 ```bash
-cd ..
 export $(cat .env | xargs)
 
 cd $WILDFLY_HOME
-./bin/standalone.sh -Dapi.rate.limit.disabled=true \
+./bin/standalone.sh -b 0.0.0.0 \
+                    -Dapi.rate.limit.disabled=true \
                     -Djavax.net.ssl.trustStore=./standalone/configuration/truststore.jks \
-                    -Djavax.net.ssl.trustStorePassword=changeit
+                    -Djavax.net.ssl.trustStorePassword=changeit \
+                    -DCONSUL_HOST="$CONSUL_HOST" -DCONSUL_PORT="$CONSUL_PORT"
 ```
 
 ### Настройка динамически расширяемого EJB-пула:

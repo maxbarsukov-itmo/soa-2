@@ -1,6 +1,6 @@
 services:
   postgres:
-    env_file: .env
+    env_file: ./people-collection-service/.env
     image: postgres:14.2
     restart: unless-stopped
     environment:
@@ -11,6 +11,20 @@ services:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - database_data:/var/lib/postgresql/data
+
+  consul:
+    env_file: ./people-collection-service/.env
+    image: hashicorp/consul:1.22
+    container_name: consul
+    restart: unless-stopped
+    environment:
+      - CONSUL_HOST=$CONSUL_HOST
+      - CONSUL_PORT=$CONSUL_PORT
+      - CONSUL_DNS_PORT=$CONSUL_DNS_PORT
+    ports:
+      - "${CONSUL_PORT}:${CONSUL_PORT}"
+      - "${CONSUL_DNS_PORT}:${CONSUL_DNS_PORT}/udp"
+    command: "agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -bind=0.0.0.0 -datacenter=dc1"
 
 volumes:
   database_data:
