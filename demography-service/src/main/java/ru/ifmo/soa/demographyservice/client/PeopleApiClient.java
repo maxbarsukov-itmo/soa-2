@@ -11,7 +11,7 @@ import ru.ifmo.soa.demographyservice.dto.PeopleResponseDto;
 @Component
 public class PeopleApiClient implements PeopleClient {
 
-  private static final String BASE_URL = "https://people-service/api/v1";
+  private static final String BASE_URL = "http://people-service/api/v1";
   private static final String GET_PEOPLE = BASE_URL + "/people?page=0&pageSize=1";
   private static final String SEARCH_PEOPLE = BASE_URL + "/people/search?page=0&pageSize=1";
 
