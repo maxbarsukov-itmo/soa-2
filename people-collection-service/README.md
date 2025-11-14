@@ -41,7 +41,7 @@ $WILDFLY_HOME/bin/jboss-cli.sh --connect
 
 ```bash
 # 1. Создать пул, размер которого масштабируется от worker-пула (HTTP threads)
-/subsystem=ejb3/strict-max-bean-instance-pool=people-service-pool:add(derive-size=from-worker-pools)
+/subsystem=ejb3/strict-max-bean-instance-pool=people-service-pool:add(derive-size=from-worker-pools,max-pool-size=100,timeout=5,timeout-unit=MINUTES)
 
 # 2. Назначить его как пул по умолчанию для всех Stateless Session Beans
 /subsystem=ejb3:write-attribute(name=default-slsb-instance-pool, value=people-service-pool)
@@ -56,7 +56,7 @@ reload
 #     "outcome" => "success",
 #     "result" => {
 #         "derive-size" => "from-worker-pools",
-#         "max-pool-size" => XXX,
+#         "max-pool-size" => 100,
 #         "timeout" => 5L,
 #         "timeout-unit" => "MINUTES"
 #     }
