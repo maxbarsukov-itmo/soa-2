@@ -1,26 +1,26 @@
 package ru.ifmo.soa.peopleservice.dto;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
 import java.io.Serial;
 import java.io.Serializable;
 
+@XmlRootElement(name = "PersonInput")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class PersonInputDto implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
-  @NotNull
-  private String name;
-  @NotNull
-  private CoordinatesDto coordinates;
+  @NotNull private String name;
+  @NotNull private CoordinatesDto coordinates;
   private Float height;
-  @NotNull
-  private String eyeColor;
+  @NotNull private String eyeColor;
   private String hairColor;
   private String nationality;
-  @NotNull
-  private LocationDto location;
+  @NotNull private LocationDto location;
 
   public String getName() {
     return name;
