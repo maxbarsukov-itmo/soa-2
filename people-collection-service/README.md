@@ -26,7 +26,9 @@ cd $WILDFLY_HOME
                     -Dapi.rate.limit.disabled=true \
                     -Djavax.net.ssl.trustStore=./standalone/configuration/truststore.jks \
                     -Djavax.net.ssl.trustStorePassword=changeit \
-                    -DCONSUL_HOST="$CONSUL_HOST" -DCONSUL_PORT="$CONSUL_PORT" -DEUREKA_URL="$EUREKA_URL"
+                    -DCONSUL_HOST="$CONSUL_HOST" -DCONSUL_PORT="$CONSUL_PORT" \
+                    -DEUREKA_URL="$EUREKA_URL" \
+                    -DSERVICE_HOST="$SERVICE_HOST"
 ```
 
 ### Настройка динамически расширяемого EJB-пула:

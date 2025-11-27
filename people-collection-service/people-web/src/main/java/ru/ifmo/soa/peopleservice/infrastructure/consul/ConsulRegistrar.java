@@ -12,7 +12,12 @@ import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.io.support.ClassicRequestBuilder;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.util.UUID;
 import java.util.logging.Logger;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 @Singleton
 @Startup
@@ -20,26 +25,26 @@ public class ConsulRegistrar {
 
   private static final Logger LOG = Logger.getLogger(ConsulRegistrar.class.getName());
 
-  private static final String SERVICE_NAME = "people-service";
-  private static final String CONSUL_HOST = System.getenv().getOrDefault("CONSUL_HOST", "localhost");
-  private static final int CONSUL_PORT = Integer.parseInt(System.getenv().getOrDefault("CONSUL_PORT", "8500"));
+  private final String serviceName = "people-service";
+  private final String consulHost = System.getenv().get("CONSUL_HOST");
+  private final int consulPort = Integer.parseInt(System.getenv().get("CONSUL_PORT"));
 
-  // TODO FIXME https doesnt work
-  private static final String HEALTH_CHECK_URL = "http://172.17.0.1:8080/api/v1/health";
-  private static final String SERVICE_ADDRESS = "172.17.0.1";
-  private static final int SERVICE_PORT = 8080;
+  private final String serviceHost = System.getenv().getOrDefault("SERVICE_HOST", "172.17.0.1");
+  private final int servicePort = getHttpPort();
+  private final String serviceId = serviceName + "-" + UUID.randomUUID().toString().substring(0, 8);
+  private final String healthCheckUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/health";
 
   private CloseableHttpClient httpClient;
 
   @PostConstruct
   public void register() {
     httpClient = HttpClients.createDefault();
-    String registrationUrl = "http://" + CONSUL_HOST + ":" + CONSUL_PORT + "/v1/agent/service/register";
+    String registrationUrl = "http://" + consulHost + ":" + consulPort + "/v1/agent/service/register";
 
     String payload = """
       {
         "Name": "%s",
-        "ID": "%s-1",
+        "ID": "%s",
         "Address": "%s",
         "Port": %d,
         "Check": {
@@ -48,7 +53,7 @@ public class ConsulRegistrar {
           "Timeout": "3s"
         }
       }
-      """.formatted(SERVICE_NAME, SERVICE_NAME, SERVICE_ADDRESS, SERVICE_PORT, HEALTH_CHECK_URL);
+      """.formatted(serviceName, serviceId, serviceHost, servicePort, healthCheckUrl);
 
     try {
       var request = ClassicRequestBuilder.put(registrationUrl)
@@ -70,7 +75,7 @@ public class ConsulRegistrar {
 
   @PreDestroy
   public void close() {
-    String deregisterUrl = "http://" + CONSUL_HOST + ":" + CONSUL_PORT + "/v1/agent/service/deregister/" + SERVICE_NAME + "-1";
+    String deregisterUrl = "http://" + consulHost + ":" + consulPort + "/v1/agent/service/deregister/" + serviceId;
     try {
       var request = ClassicRequestBuilder.put(deregisterUrl).build();
       httpClient.execute(request, response -> {
@@ -87,6 +92,21 @@ public class ConsulRegistrar {
       } catch (IOException e) {
         LOG.warning("Failed to close HTTP client: " + e.getMessage());
       }
+    }
+  }
+
+  private int getHttpPort() {
+    try {
+        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+        ObjectName binding = new ObjectName("jboss.as:socket-binding-group=standard-sockets,socket-binding=http");
+        return (Integer) server.getAttribute(binding, "boundPort");
+    } catch (Exception e) {
+        String portStr = System.getProperty("jboss.http.port");
+        try {
+            return Integer.parseInt(portStr);
+        } catch (NumberFormatException ex) {
+            throw new RuntimeException("Failed to determine HTTP port", e);
+        }
     }
   }
 }
