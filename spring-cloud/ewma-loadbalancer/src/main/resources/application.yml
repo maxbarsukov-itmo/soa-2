@@ -1,0 +1,20 @@
+server:
+  port: 8777
+
+spring:
+  application:
+    name: ewma-loadbalancer
+
+consul:
+  host: ${CONSUL_HOST}
+  port: ${CONSUL_PORT}
+  watch:
+    block-seconds: 600  # Maximum time to wait for a response from Consul
+
+service:
+  backend:
+    name: people-service
+
+logging:
+  level:
+    ru.ifmo.soa.ewmalb: DEBUG
