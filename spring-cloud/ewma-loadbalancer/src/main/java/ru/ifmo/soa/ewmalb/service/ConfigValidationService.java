@@ -26,9 +26,6 @@ public class ConfigValidationService {
 
   private static final Logger log = LoggerFactory.getLogger(ConfigValidationService.class);
 
-  @Value("${ewma.monitoring.validation.interval-ms:60000}")
-  private long validationIntervalMs;
-
   @Value("${ewma.monitoring.validation.self-healing-enabled:true}")
   private boolean selfHealingEnabled;
 
