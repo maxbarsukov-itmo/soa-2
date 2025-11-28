@@ -3,6 +3,7 @@ package ru.ifmo.soa.ewmalb.service;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -22,8 +23,8 @@ public class ThreadPoolMonitorService {
   private final ThreadPoolTaskExecutor healthCheckExecutor;
   private final ScheduledExecutorService monitorExecutor;
 
-  public ThreadPoolMonitorService(ThreadPoolTaskExecutor loadBalancerTaskExecutor,
-                                  ThreadPoolTaskExecutor healthCheckTaskExecutor) {
+  public ThreadPoolMonitorService(@Qualifier("loadBalancerTaskExecutor") ThreadPoolTaskExecutor loadBalancerTaskExecutor,
+                                  @Qualifier("healthCheckTaskExecutor") ThreadPoolTaskExecutor healthCheckTaskExecutor) {
     this.loadBalancerExecutor = loadBalancerTaskExecutor;
     this.healthCheckExecutor = healthCheckTaskExecutor;
     this.monitorExecutor = Executors.newSingleThreadScheduledExecutor(r -> {

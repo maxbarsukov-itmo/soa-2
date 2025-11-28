@@ -12,7 +12,9 @@ import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import ru.ifmo.soa.ewmalb.balancer.EwmaInstance;
 import ru.ifmo.soa.ewmalb.balancer.EwmaLoadBalancer;
@@ -31,6 +33,7 @@ public class EnhancedHealthCheckService {
   private final CloseableHttpClient httpClient;
   private final MeterRegistry meterRegistry;
   private final ConcurrentHashMap<String, Timer> healthCheckTimers;
+  private final ThreadPoolTaskExecutor healthCheckTaskExecutor;
 
   private final AtomicBoolean running = new AtomicBoolean(true);
   private Thread healthCheckThread;
@@ -48,7 +51,8 @@ public class EnhancedHealthCheckService {
                                     MeterRegistry meterRegistry,
                                     @Value("${ewma.loadbalancer.health-check.path:/health}") String healthCheckPath,
                                     @Value("${ewma.loadbalancer.health-check.interval-ms:30000}") long healthCheckInterval,
-                                    @Value("${ewma.loadbalancer.health-check.timeout-ms:5000}") int healthCheckTimeout) {
+                                    @Value("${ewma.loadbalancer.health-check.timeout-ms:5000}") int healthCheckTimeout,
+                                    @Qualifier("healthCheckTaskExecutor") ThreadPoolTaskExecutor healthCheckTaskExecutor) {
     this.loadBalancer = loadBalancer;
     this.meterRegistry = meterRegistry;
     this.healthCheckPath = healthCheckPath;
@@ -56,6 +60,7 @@ public class EnhancedHealthCheckService {
     this.healthCheckTimeout = healthCheckTimeout;
     this.httpClient = HttpClients.createDefault();
     this.healthCheckTimers = new ConcurrentHashMap<>();
+    this.healthCheckTaskExecutor = healthCheckTaskExecutor;
 
     this.metricsEnabled = !(meterRegistry instanceof FallbackMeterRegistry);
 
@@ -89,9 +94,9 @@ public class EnhancedHealthCheckService {
     log.info("Starting enhanced health checks (path: {}, interval: {}ms, timeout: {}ms, metrics enabled: {})",
       healthCheckPath, healthCheckInterval, healthCheckTimeout, metricsEnabled);
 
-    healthCheckThread = new Thread(this::healthCheckLoop, "enhanced-health-check-worker");
-    healthCheckThread.setDaemon(true);
-    healthCheckThread.start();
+    healthCheckThread = new Thread(() -> {
+      healthCheckTaskExecutor.execute(this::healthCheckLoop);
+    }, "enhanced-health-check-worker");
   }
 
   private void healthCheckLoop() {

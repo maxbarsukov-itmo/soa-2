@@ -10,6 +10,7 @@ public class LoadBalancerConfig {
   private double alpha = 0.2;
   private AdaptiveAlpha adaptiveAlpha = new AdaptiveAlpha();
   private Selection selection = new Selection();
+  private Proxy proxy = new Proxy();
   private CircuitBreaker circuitBreaker = new CircuitBreaker();
   private HealthCheck healthCheck = new HealthCheck();
   private Retry retry = new Retry();
@@ -77,6 +78,13 @@ public class LoadBalancerConfig {
     public void setLoadAware(LoadAware loadAware) {
       this.loadAware = loadAware;
     }
+  }
+
+  public static class Proxy {
+    private long timeoutMs = 30_000;
+
+    public long getTimeoutMs() { return timeoutMs; }
+    public void setTimeoutMs(long timeoutMs) { this.timeoutMs = timeoutMs; }
   }
 
   public static class WeightedRandom {
@@ -150,7 +158,7 @@ public class LoadBalancerConfig {
     private boolean enabled = true;
     private long intervalMs = 30000;
     private long timeoutMs = 5000;
-    private String path = "/api/v1/health";
+    private String path = "/health";
 
     public boolean isEnabled() {
       return enabled;
@@ -311,6 +319,14 @@ public class LoadBalancerConfig {
 
   public void setSelection(Selection selection) {
     this.selection = selection;
+  }
+
+  public Proxy getProxy() {
+    return proxy;
+  }
+
+  public void setProxy(Proxy proxy) {
+    this.proxy = proxy;
   }
 
   public CircuitBreaker getCircuitBreaker() {

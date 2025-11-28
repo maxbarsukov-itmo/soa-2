@@ -1,19 +1,22 @@
 package ru.ifmo.soa.ewmalb.proxy;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.io.support.ClassicRequestBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.ifmo.soa.ewmalb.balancer.EwmaInstance;
 import ru.ifmo.soa.ewmalb.balancer.EwmaLoadBalancer;
+import ru.ifmo.soa.ewmalb.config.LoadBalancerConfig;
 import ru.ifmo.soa.ewmalb.service.*;
-
-import jakarta.servlet.http.HttpServletRequest;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.*;
 
 @RestController
 public class ProxyController extends BaseProxyController {
@@ -23,6 +26,8 @@ public class ProxyController extends BaseProxyController {
   private final StickySessionService stickySessionService;
   private final ABTestingService abTestingService;
   private final RateLimitService rateLimitService;
+  private final ThreadPoolTaskExecutor loadBalancerTaskExecutor;
+  private final LoadBalancerConfig loadBalancerConfig;
 
   public ProxyController(EwmaLoadBalancer balancer,
                          CloseableHttpClient httpClient,
@@ -31,13 +36,16 @@ public class ProxyController extends BaseProxyController {
                          StickySessionService stickySessionService,
                          ABTestingService abTestingService,
                          RateLimitService rateLimitService,
-                         LatencyDistributionService latencyDistributionService) {
+                         LatencyDistributionService latencyDistributionService,
+                         @Qualifier("loadBalancerTaskExecutor") ThreadPoolTaskExecutor loadBalancerTaskExecutor, LoadBalancerConfig loadBalancerConfig) {
     super(httpClient, metricsService);
     this.balancer = balancer;
     this.retryService = retryService;
     this.stickySessionService = stickySessionService;
     this.abTestingService = abTestingService;
     this.rateLimitService = rateLimitService;
+    this.loadBalancerTaskExecutor = loadBalancerTaskExecutor;
+    this.loadBalancerConfig = loadBalancerConfig;
     setLatencyDistributionService(latencyDistributionService);
   }
 
@@ -54,19 +62,50 @@ public class ProxyController extends BaseProxyController {
 
     String sessionId = extractSessionId(request);
 
-    return retryService.executeWithRetry((instance, svc) -> {
-      EwmaInstance targetInstance = selectTargetInstance(svc, request, sessionId, instance);
+    long proxyTimeoutMs = loadBalancerConfig.getProxy().getTimeoutMs();
 
-      if (targetInstance == null) {
-        throw new RuntimeException("No instances available for service: " + service);
+    Future<ResponseEntity<byte[]>> future =  CompletableFuture.supplyAsync(() -> retryService.executeWithRetry((instance, svc) -> {
+        EwmaInstance targetInstance = selectTargetInstance(svc, request, sessionId, instance);
+
+        if (targetInstance == null) {
+          throw new RuntimeException("No instances available for service: " + service);
+        }
+
+        if (sessionId != null) {
+          stickySessionService.updateSession(sessionId, service, targetInstance);
+        }
+
+        return executeProxyRequest(request, targetInstance, svc);
+      }, "proxy request", service), loadBalancerTaskExecutor
+    );
+    try {
+      return future.get(proxyTimeoutMs, TimeUnit.MILLISECONDS);
+
+    } catch (TimeoutException e) {
+      future.cancel(true);
+      log.warn("Proxy request to service '{}' timed out after {} ms", service, proxyTimeoutMs);
+      return ResponseEntity.status(504)
+        .body("Upstream service did not respond in time".getBytes());
+
+    } catch (InterruptedException e) {
+      future.cancel(true);
+      Thread.currentThread().interrupt();
+      log.warn("Proxy request to service '{}' was interrupted", service);
+      return ResponseEntity.status(503)
+        .body("Request processing was interrupted".getBytes());
+
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof RuntimeException runtimeEx) {
+        log.error("Proxy request failed for service '{}': {}", service, runtimeEx.getMessage());
+        return ResponseEntity.status(502)
+          .body(("Backend error: " + runtimeEx.getMessage()).getBytes());
+      } else {
+        log.error("Unexpected error during proxy request to service '{}'", service, cause);
+        return ResponseEntity.status(500)
+          .body("Internal proxy error".getBytes());
       }
-
-      if (sessionId != null) {
-        stickySessionService.updateSession(sessionId, service, targetInstance);
-      }
-
-      return executeProxyRequest(request, targetInstance, svc);
-    }, "proxy request", service);
+    }
   }
 
   private EwmaInstance selectTargetInstance(String service, HttpServletRequest request,

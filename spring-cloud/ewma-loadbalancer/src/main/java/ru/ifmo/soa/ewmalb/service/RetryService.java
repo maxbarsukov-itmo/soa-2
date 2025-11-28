@@ -2,10 +2,10 @@ package ru.ifmo.soa.ewmalb.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.ifmo.soa.ewmalb.balancer.EwmaInstance;
 import ru.ifmo.soa.ewmalb.balancer.EwmaLoadBalancer;
+import ru.ifmo.soa.ewmalb.config.BackendConfig;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -16,21 +16,13 @@ public class RetryService {
 
   private final EwmaLoadBalancer loadBalancer;
 
-  @Value("${ewma.loadbalancer.retry.enabled}")
-  private boolean retryEnabled;
-
-  @Value("${ewma.loadbalancer.retry.max-attempts}")
-  private int maxAttempts;
-
-  @Value("${ewma.loadbalancer.retry.backoff-ms}")
-  private long baseBackoffMs;
-
   public RetryService(EwmaLoadBalancer loadBalancer) {
     this.loadBalancer = loadBalancer;
   }
 
   public <T> T executeWithRetry(RetryableOperation<T> operation, String operationName, String service) {
-    if (!retryEnabled) {
+    BackendConfig.BackendSpec spec = loadBalancer.getBackendSpec(service);
+    if (!spec.getRetry().isEnabled()) {
       try {
         return operation.execute(service);
       } catch (Exception e) {
@@ -38,6 +30,8 @@ public class RetryService {
         throw new RuntimeException(e);
       }
     }
+
+    int maxAttempts = spec.getRetry().getMaxAttempts();
 
     int attempt = 0;
     Exception lastException = null;
@@ -70,7 +64,7 @@ public class RetryService {
           operationName, service, attempt, maxAttempts, instance.getId(), e.getMessage());
 
         if (attempt < maxAttempts) {
-          long backoffMs = calculateBackoff(attempt);
+          long backoffMs = calculateBackoff(spec, attempt);
           log.debug("Backing off for {}ms before retry (service: {})", backoffMs, service);
           try {
             Thread.sleep(backoffMs);
@@ -87,7 +81,8 @@ public class RetryService {
       operationName + " (service: " + service + "): " + message, lastException);
   }
 
-  private long calculateBackoff(int attempt) {
+  private long calculateBackoff(BackendConfig.BackendSpec spec, int attempt) {
+    long baseBackoffMs = spec.getRetry().getBackoffMs();
     long exponentialBackoff = baseBackoffMs * (1L << (attempt - 1));
     long jitter = ThreadLocalRandom.current().nextLong(0, baseBackoffMs / 2);
     return exponentialBackoff + jitter;

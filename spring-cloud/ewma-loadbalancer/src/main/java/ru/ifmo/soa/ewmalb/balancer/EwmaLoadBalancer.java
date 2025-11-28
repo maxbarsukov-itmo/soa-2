@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import ru.ifmo.soa.ewmalb.config.BackendConfig;
 import ru.ifmo.soa.ewmalb.service.AdaptiveEwmaService;
 
 import java.util.*;
@@ -17,6 +18,8 @@ public class EwmaLoadBalancer {
   private static final Logger log = LoggerFactory.getLogger(EwmaLoadBalancer.class);
 
   private final ConcurrentHashMap<String, EwmaInstance> instances = new ConcurrentHashMap<>();
+  private final Map<String, BackendConfig.BackendSpec> backendSpecs = new ConcurrentHashMap<>();
+
   private final AdaptiveEwmaService adaptiveEwmaService;
 
   private volatile boolean drainMode = false;
@@ -44,11 +47,12 @@ public class EwmaLoadBalancer {
   }
 
   public void registerInstance(String serviceName, String id, String address, int port) {
+    BackendConfig.BackendSpec spec = getBackendSpec(serviceName);
     EwmaInstance instance = new EwmaInstance(
       serviceName, id, address, port,
-      circuitBreakerFailureThreshold,
-      circuitBreakerResetTimeoutMs,
-      halfOpenTimeoutMs
+      spec.getCircuitBreaker().getFailureThreshold(),
+      spec.getCircuitBreaker().getResetTimeoutMs(),
+      spec.getCircuitBreaker().getHalfOpenTimeoutMs()
     );
     instances.put(id, instance);
     log.info("Registered backend: {} (service: {}) - {}:{}", id, serviceName, address, port);
@@ -189,6 +193,18 @@ public class EwmaLoadBalancer {
     return (int) instances.values().stream()
       .filter(EwmaInstance::isHealthy)
       .count();
+  }
+
+  public void setBackendSpec(String serviceName, BackendConfig.BackendSpec spec) {
+    this.backendSpecs.put(serviceName, spec);
+  }
+
+  public BackendConfig.BackendSpec getBackendSpec(String serviceName) {
+    return backendSpecs.getOrDefault(serviceName, getDefaultBackendSpec());
+  }
+
+  private BackendConfig.BackendSpec getDefaultBackendSpec() {
+    return new BackendConfig.BackendSpec();
   }
 
   public String getSelectionStrategy() {

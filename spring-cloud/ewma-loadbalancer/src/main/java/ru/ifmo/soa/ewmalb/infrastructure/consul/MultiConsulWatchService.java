@@ -9,12 +9,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.ifmo.soa.ewmalb.balancer.EwmaLoadBalancer;
-import ru.ifmo.soa.ewmalb.config.ServiceDiscoveryConfig;
+import ru.ifmo.soa.ewmalb.config.BackendConfig;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -31,7 +29,7 @@ public class MultiConsulWatchService {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final EwmaLoadBalancer loadBalancer;
 
-  private final List<String> serviceNames;
+  private final BackendConfig backendConfig;
   private final int blockSeconds;
 
   private final long initialRetryDelayMs;
@@ -40,11 +38,11 @@ public class MultiConsulWatchService {
   private final ConcurrentHashMap<String, WatchLoop> activeLoops = new ConcurrentHashMap<>();
 
   public MultiConsulWatchService(ConsulClient consulClient,
-                                EwmaLoadBalancer loadBalancer,
-                                @Value("${consul.watch.block-seconds}") int blockSeconds,
-                                @Value("${consul.watch.initial-retry-delay-ms:2000}") long initialRetryDelayMs,
-                                @Value("${consul.watch.max-retry-delay-ms:30000}") long maxRetryDelayMs,
-                                 ServiceDiscoveryConfig serviceConfig) {
+                                 EwmaLoadBalancer loadBalancer,
+                                 @Value("${consul.watch.block-seconds}") int blockSeconds,
+                                 @Value("${consul.watch.initial-retry-delay-ms:2000}") long initialRetryDelayMs,
+                                 @Value("${consul.watch.max-retry-delay-ms:30000}") long maxRetryDelayMs,
+                                 BackendConfig backendConfig) {
     this.consulClient = consulClient;
     this.loadBalancer = loadBalancer;
     this.initialRetryDelayMs = initialRetryDelayMs;
@@ -55,15 +53,15 @@ public class MultiConsulWatchService {
       throw new IllegalArgumentException("consul.watch.block-seconds must be between 1 and 600 seconds");
     }
 
-    this.serviceNames = new ArrayList<>(serviceConfig.getBackends());
-    if (serviceNames.isEmpty()) {
-      throw new IllegalArgumentException("At least one service must be specified in service.backends");
+    this.backendConfig = backendConfig;
+    if (backendConfig.getBackends().isEmpty()) {
+      throw new IllegalArgumentException("At least one backend must be specified in ewma.backends");
     }
   }
 
   @PostConstruct
   public void startWatchLoops() {
-    for (String serviceName : serviceNames) {
+    for (String serviceName : backendConfig.getBackends().keySet()) {
       WatchLoop loop = new WatchLoop(serviceName);
       activeLoops.put(serviceName, loop);
       loop.start();
@@ -78,6 +76,7 @@ public class MultiConsulWatchService {
   private class WatchLoop {
 
     private final String serviceName;
+
     private final ExecutorService executor;
 
     private volatile boolean running = true;
@@ -87,6 +86,16 @@ public class MultiConsulWatchService {
 
     public WatchLoop(String serviceName) {
       this.serviceName = serviceName;
+      BackendConfig.BackendSpec backendSpec = backendConfig.getBackends().get(serviceName);
+
+      if (backendSpec == null) {
+        log.warn("No config found for service '{}', using defaults", serviceName);
+        backendSpec = new BackendConfig.BackendSpec();
+        backendConfig.getBackends().put(serviceName, backendSpec);
+      }
+
+      loadBalancer.setBackendSpec(serviceName, backendSpec);
+
       this.executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "consul-watch-" + serviceName + "-loop");
         t.setDaemon(true);

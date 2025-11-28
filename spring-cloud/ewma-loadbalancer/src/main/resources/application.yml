@@ -7,14 +7,6 @@ spring:
 
 service:
   host: ${SERVER_HOST:localhost}
-  meta:
-    version: "1.0"
-    type: "ewma-loadbalancer"
-
-  backends:
-    - people-service
-    - demography-service
-
   registration:
     enabled: true
     health-check-url: http://${service.host}:${server.port}/health
@@ -56,6 +48,38 @@ management:
         enabled: true
 
 ewma:
+  meta:
+    version: "1.0"
+    type: "ewma-loadbalancer"
+
+  backends:
+    people-service:
+      health-check:
+        path: /api/v1/health
+        interval-ms: 15000
+        timeout-ms: 3000
+      circuit-breaker:
+        failure-threshold: 3
+        reset-timeout-ms: 45000
+      retry:
+        enabled: true
+        max-attempts: 2
+        backoff-ms: 50
+      selection:
+        strategy: WEIGHTED_RANDOM
+    demography-service:
+      health-check:
+        path: /api/v1/health
+        interval-ms: 20000
+        timeout-ms: 5000
+      circuit-breaker:
+        failure-threshold: 5
+        reset-timeout-ms: 60000
+      retry:
+        enabled: false
+      selection:
+        strategy: LEAST_CONNECTIONS
+
   # Основные настройки балансировщика
   loadbalancer:
     # Базовый alpha для EWMA
@@ -74,6 +98,9 @@ ewma:
         enabled: true
     load-aware:
       max-concurrent-requests: 100
+
+    proxy:
+      timeout-ms: 30000
 
     # Circuit Breaker настройки
     circuit-breaker:

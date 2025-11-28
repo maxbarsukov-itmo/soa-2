@@ -34,10 +34,10 @@ public class ConsulRegistrationService {
   @Value("${service.host}")
   private String serverHost;
 
-  @Value("${service.meta.version}")
+  @Value("${ewma.meta.version}")
   private String serviceVersion;
 
-  @Value("${service.meta.type}")
+  @Value("${ewma.meta.type}")
   private String serviceType;
 
   private CloseableHttpClient httpClient;
