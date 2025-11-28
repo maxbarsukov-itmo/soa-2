@@ -31,8 +31,11 @@ http-client:
   max-total: ${HTTP_CLIENT_MAX_TOTAL:10}
   max-per-route: ${HTTP_CLIENT_MAX_PER_ROUTE:5}
 
+service:
+  host: ${SERVICE_HOST}
+
 server:
-  port: 8081
+  port: ${SERVICE_PORT}
   error:
     include-message: always
     include-binding-errors: always
