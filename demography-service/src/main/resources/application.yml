@@ -17,18 +17,9 @@ eureka:
     instance-id: ${spring.application.name}:${random.uuid}
     hostname: ${SERVICE_HOST}
     ip-address: ${SERVICE_HOST}
-    status-page-url: http://${SERVICE_HOST}:${server.port}/actuator/info
+    status-page-url: http://${SERVICE_HOST}:${server.port}/api/v1/health
     health-check-url: http://${SERVICE_HOST}:${server.port}/api/v1/health
     home-page-url: http://${SERVICE_HOST}:${server.port}/
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: always
 
 http-client:
   connect-timeout: ${HTTP_CLIENT_CONNECT_TIMEOUT:5}
