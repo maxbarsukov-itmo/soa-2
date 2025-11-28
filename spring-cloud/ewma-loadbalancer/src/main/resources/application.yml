@@ -5,16 +5,264 @@ spring:
   application:
     name: ewma-loadbalancer
 
+service:
+  host: ${SERVER_HOST:localhost}
+  meta:
+    version: "1.0"
+    type: "ewma-loadbalancer"
+
+  backends:
+    - people-service
+    - demography-service
+
+  registration:
+    enabled: true
+    health-check-url: http://${service.host}:${server.port}/health
+    tags: ["loadbalancer", "ewma"]
+
 consul:
   host: ${CONSUL_HOST}
   port: ${CONSUL_PORT}
   watch:
-    block-seconds: 600  # Maximum time to wait for a response from Consul
+    block-seconds: 600
+    initial-retry-delay-ms: 2000
+    max-retry-delay-ms: 30000
 
-service:
-  backend:
-    name: people-service
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus,thread-pools,validation,rate-limit,strategies,shutdown
+      base-path: /management
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    enable:
+      jvm: true
+      system: true
+      logback: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+ewma:
+  # Основные настройки балансировщика
+  loadbalancer:
+    # Базовый alpha для EWMA
+    alpha: 0.2
+
+    # Адаптивный alpha
+    adaptive-alpha:
+      enabled: true
+      base-alpha: 0.2
+      max-alpha: 0.4
+
+    # Стратегии выбора инстансов
+    selection:
+      strategy: WEIGHTED_RANDOM # WEIGHTED_RANDOM, PURE_EWMA, LOAD_AWARE, LEAST_CONNECTIONS
+      weighted-random:
+        enabled: true
+    load-aware:
+      max-concurrent-requests: 100
+
+    # Circuit Breaker настройки
+    circuit-breaker:
+      enabled: true
+      failure-threshold: 5
+      reset-timeout-ms: 60000
+      half-open-timeout-ms: 30000
+
+    # Health Check настройки
+    health-check:
+      enabled: true
+      interval-ms: 30000
+      timeout-ms: 5000
+      path: /api/v1/health
+      emergency-timeout-ms: 2000
+      emergency-check-enabled: true
+
+    # Retry настройки
+    retry:
+      enabled: true
+      max-attempts: 3
+      backoff-ms: 100
+      max-backoff-ms: 5000
+
+    # Sticky Sessions
+    sticky-sessions:
+      enabled: false
+      timeout-minutes: 30
+      cleanup-interval-minutes: 1
+
+    # Graceful Degradation
+    graceful-degradation:
+      enabled: true
+      allow-unhealthy: false
+      min-healthy-percentage: 30
+
+    # Predictive Latency
+    predictive-latency:
+      enabled: true
+      cold-instance-penalty: 1.5
+      cold-timeout-ms: 60000
+
+    # A/B Testing
+    ab-testing:
+      enabled: true
+      header-name: "X-Experiment"
+      cookie-name: "X-AB-Test"
+      experiments:
+        service_people:
+          name: "People Service A/B Test"
+          variants:
+            control: 0.5
+            new-ui: 0.3
+            experimental: 0.2
+          default-variant: "control"
+          instance-mapping:
+            control: "v1"
+            new-ui: "v2"
+            experimental: "exp"
+          sticky: true
+          sticky-timeout-minutes: 30
+        service_*:
+          name: "Global Canary Deployment"
+          variants:
+            stable: 0.9
+            canary: 0.1
+          default-variant: "stable"
+          instance-mapping:
+            stable: "prod"
+            canary: "canary"
+          sticky: false
+
+  # Настройки пулов потоков
+  threadpool:
+    loadbalancer:
+      core-size: 50
+      max-size: 200
+      queue-capacity: 1000
+      keep-alive-seconds: 60
+      await-termination-seconds: 30
+    healthcheck:
+      core-size: 10
+      max-size: 20
+      queue-capacity: 100
+      keep-alive-seconds: 30
+      await-termination-seconds: 10
+    monitoring:
+      core-size: 5
+      max-size: 10
+      queue-capacity: 50
+      keep-alive-seconds: 30
+
+  # Настройки HTTP клиента
+  httpclient:
+    max-connections-total: 200
+    max-connections-per-route: 50
+    connect-timeout-ms: 10000
+    socket-timeout-ms: 30000
+    connection-request-timeout-ms: 5000
+    connection-time-to-live-ms: 300000
+    evict-idle-connections-ms: 60000
+    evict-expired-connections: true
+
+  # Настройки безопасности
+  security:
+    rate-limit:
+      enabled: true
+      global:
+        enabled: true
+        requests-per-minute: 1000
+        burst-capacity: 1500
+      rules:
+        api-critical:
+          requests-per-minute: 100
+          burst-capacity: 150
+          by-ip: true
+          by-user: false
+          path-pattern: "/api/v1/**"
+        health-endpoints:
+          requests-per-minute: 300
+          burst-capacity: 500
+          by-ip: true
+          path-pattern: "/health/**"
+        management-endpoints:
+          requests-per-minute: 200
+          burst-capacity: 300
+          by-ip: true
+          path-pattern: "/management/**"
+
+  # Настройки мониторинга и метрик
+  monitoring:
+    metrics:
+      enabled: true
+      export-interval-ms: 30000
+      latency-histogram-buckets: "10,25,50,100,250,500,1000,2500,5000"
+      recent-samples-size: 1000
+
+    validation:
+      enabled: true
+      interval-ms: 60000
+      self-healing-enabled: true
+      log-interval-count: 5
+
+    threadpool-monitor:
+      enabled: true
+      interval-ms: 30000
+
+    latency-distribution:
+      enabled: true
+      cleanup-interval-ms: 300000
+
+  # Настройки graceful shutdown
+  shutdown:
+    timeout-ms: 30000
+    drain-timeout-ms: 10000
+    health-check-stop-delay-ms: 2000
+    connection-close-delay-ms: 1000
+
+  # Настройки стратегий балансировки
+  strategies:
+    high-latency-mode:
+      enabled: true
+      duration-ms: 300000
+      avg-latency-threshold-ms: 1000
+      std-dev-threshold-ms: 500
+      restore-latency-threshold-ms: 200
+      restore-std-dev-threshold-ms: 100
+      healthy-ratio-for-least-connections: 0.5
 
 logging:
   level:
-    ru.ifmo.soa.ewmalb: DEBUG
+    ru.ifmo.soa.ewmalb: INFO
+    ru.ifmo.soa.ewmalb.balancer: DEBUG
+    ru.ifmo.soa.ewmalb.service: DEBUG
+    ru.ifmo.soa.ewmalb.proxy: DEBUG
+    org.apache.hc.client5: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.cloud.client.hostname}:${spring.application.name}:${server.port}
+    health-check-url: http://${service.host}:${server.port}/health
+    status-page-url: http://${service.host}:${server.port}/management/info
+    home-page-url: http://${service.host}:${server.port}/
