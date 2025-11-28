@@ -70,7 +70,7 @@ public class EurekaRegistrar {
     instance.securePort = new Port(51313, false);
 
     instance.homePageUrl = "http://" + serviceHost + ":" + servicePort + "/";
-    instance.statusPageUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/info";
+    instance.statusPageUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/health";
     instance.healthCheckUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/health";
     instance.dataCenterInfo = new DataCenterInfo("MyOwn");
     instance.leaseInfo = new LeaseInfo(heartbeatInterval, 3 * heartbeatInterval);
