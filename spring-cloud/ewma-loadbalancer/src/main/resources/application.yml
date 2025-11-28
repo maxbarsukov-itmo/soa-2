@@ -67,6 +67,7 @@ ewma:
         backoff-ms: 50
       selection:
         strategy: WEIGHTED_RANDOM
+
     demography-service:
       health-check:
         path: /api/v1/health
@@ -79,6 +80,21 @@ ewma:
         enabled: false
       selection:
         strategy: LEAST_CONNECTIONS
+
+    test-service:
+      health-check:
+        path: /ping
+        interval-ms: 2000
+        timeout-ms: 5000
+      circuit-breaker:
+        failure-threshold: 5
+        reset-timeout-ms: 60000
+      retry:
+        enabled: true
+        max-attempts: 2
+        backoff-ms: 50
+      selection:
+        strategy: WEIGHTED_RANDOM
 
   # Основные настройки балансировщика
   loadbalancer:
