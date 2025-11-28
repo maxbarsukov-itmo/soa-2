@@ -18,6 +18,10 @@ docker compose up
 
 Для тестов в [`api-tests`](../api-tests) выключаем Rate Limit:
 
+
+> [!WARNING]
+> `SERVICE_HOST` должен быть адресом, по которому `Consul` (в контейнере) может достучаться до `demography-service` (на хосте). Для Linux — `172.17.0.1`, для macOS/Windows — `host.docker.internal`.
+
 ```bash
 export $(cat .env | xargs)
 

@@ -11,36 +11,34 @@ import jakarta.inject.Inject;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.io.support.ClassicRequestBuilder;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.lang.management.ManagementFactory;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+
 @Singleton
 @Startup
 public class EurekaRegistrar {
 
-  private static final Logger LOG = Logger.getLogger(EurekaRegistrar.class.getName());
+  private static final Logger log = Logger.getLogger(EurekaRegistrar.class.getName());
 
-  private static final String APP_NAME = "PEOPLE-SERVICE";
-  private static final String INSTANCE_ID = getInstanceId();
-  private static final String HOST_NAME = getHostName();
-  private static final int HEARTBEAT_INTERVAL = 30;
+  private final String appName = "PEOPLE-SERVICE";
+  private final int heartbeatInterval = 30; // seconds
 
-  // TODO FIXME http -> https
-  private static final String eurekaBaseUrl = System.getenv().getOrDefault("EUREKA_URL", "http://localhost:8761/eureka/v2");
-  private static final String serviceHost = "localhost";
-  private static final int servicePort = 8080;
-  private static final boolean securePort = false;
-  private static final int securePortNumber = 51313;
+  private final String eurekaBaseUrl;
+  private final String serviceHost;
+  private final int servicePort;
+  private final String instanceId;
 
   @Inject
   private ObjectMapper objectMapper;
@@ -48,32 +46,34 @@ public class EurekaRegistrar {
   private CloseableHttpClient httpClient;
   private ScheduledExecutorService scheduler;
 
-  // TODO FIXME http -> https
+  public EurekaRegistrar() {
+    this.eurekaBaseUrl = System.getenv().get("EUREKA_URL");
+    this.serviceHost = System.getenv().get("SERVICE_HOST");
+    this.servicePort = getHttpPort();
+    this.instanceId = appName + "-" + UUID.randomUUID().toString().substring(0, 8);
+  }
+
   @PostConstruct
   public void register() {
     httpClient = HttpClients.createDefault();
-    String url = eurekaBaseUrl + "/apps/" + APP_NAME;
+    String url = eurekaBaseUrl + "/apps/" + appName;
 
     Instance instance = new Instance();
-    instance.instanceId = INSTANCE_ID;
-    instance.hostName = HOST_NAME;
-    instance.app = APP_NAME;
+    instance.instanceId = instanceId;
+    instance.hostName = serviceHost;
+    instance.app = appName;
     instance.ipAddr = serviceHost;
     instance.vipAddress = "people-service";
     instance.secureVipAddress = "people-service";
     instance.status = "UP";
-    instance.port = new Port();
-    instance.port.value = servicePort;
-    instance.port.enabled = "true";
-    instance.securePort = new Port();
-    instance.securePort.value = securePortNumber;
-    instance.securePort.enabled = String.valueOf(securePort);
+    instance.port = new Port(servicePort, true);
+    instance.securePort = new Port(51313, false);
+
     instance.homePageUrl = "http://" + serviceHost + ":" + servicePort + "/";
-    instance.statusPageUrl = "http://" + serviceHost + ":" + servicePort + "/info";
-    instance.healthCheckUrl = "http://" + serviceHost + ":" + servicePort + "/health";
-    instance.dataCenterInfo = new DataCenterInfo();
-    instance.dataCenterInfo.name = "MyOwn";
-    instance.leaseInfo = new LeaseInfo();
+    instance.statusPageUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/info";
+    instance.healthCheckUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/health";
+    instance.dataCenterInfo = new DataCenterInfo("MyOwn");
+    instance.leaseInfo = new LeaseInfo(heartbeatInterval, 3 * heartbeatInterval);
 
     RegistrationRequest request = new RegistrationRequest(instance);
 
@@ -87,39 +87,39 @@ public class EurekaRegistrar {
       httpClient.execute(httpRequest, response -> {
         int status = response.getCode();
         if (status == 204) { // Eureka returns 204 No Content on success
-          LOG.info("Successfully registered in Eureka (v2)");
+          log.info(String.format("Registered in Eureka (v2): ID=%s, Host=%s, Port=%s", instanceId, serviceHost, servicePort));
           startHeartbeat();
         } else {
-          LOG.severe("Failed to register in Eureka: HTTP " + status);
-          LOG.severe("Failed to register in Eureka: Response " + EntityUtils.toString(response.getEntity()));
+          log.severe("Failed to register in Eureka: HTTP " + status);
+          log.severe("Failed to register in Eureka: Response " + EntityUtils.toString(response.getEntity()));
         }
         return null;
       });
     } catch (IOException e) {
-      LOG.severe("Exception during Eureka registration: " + e.getMessage());
+      log.severe("Exception during Eureka registration: " + e.getMessage());
     }
   }
 
   private void startHeartbeat() {
     scheduler = Executors.newScheduledThreadPool(1);
-    scheduler.scheduleAtFixedRate(this::sendHeartbeat, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.SECONDS);
+    scheduler.scheduleAtFixedRate(this::sendHeartbeat, heartbeatInterval, heartbeatInterval, TimeUnit.SECONDS);
   }
 
   private void sendHeartbeat() {
-    String url = eurekaBaseUrl + "/apps/" + APP_NAME + "/" + INSTANCE_ID;
+    String url = eurekaBaseUrl + "/apps/" + appName + "/" + instanceId;
     try {
       var request = ClassicRequestBuilder.put(url).build();
       httpClient.execute(request, response -> {
         int status = response.getCode();
         if (status != 200) {
-          LOG.warning("Heartbeat failed: HTTP " + status);
+          log.warning("Heartbeat failed: HTTP " + status);
         } else {
-          LOG.info("Heartbeat: HTTP " + status);
+          log.info("Heartbeat OK: HTTP " + status);
         }
         return null;
       });
     } catch (IOException e) {
-      LOG.warning("Heartbeat exception: " + e.getMessage());
+      log.warning("Heartbeat exception: " + e.getMessage());
     }
   }
 
@@ -128,33 +128,38 @@ public class EurekaRegistrar {
     if (scheduler != null) {
       scheduler.shutdown();
     }
+
     try {
-      String url = eurekaBaseUrl + "/apps/" + APP_NAME + "/" + INSTANCE_ID;
+      String url = eurekaBaseUrl + "/apps/" + appName + "/" + instanceId;
       var request = ClassicRequestBuilder.delete(url).build();
+
       httpClient.execute(request, response -> {
         int status = response.getCode();
         if (status == 200) {
-          LOG.info("Successfully deregistered from Eureka");
+          log.info(String.format("Deregistered from Eureka: ID=%s", instanceId));
         } else {
-          LOG.warning("Deregistration failed: HTTP " + status);
+          log.warning("Deregistration failed: HTTP " + status);
         }
         return null;
       });
       httpClient.close();
     } catch (IOException e) {
-      LOG.warning("Deregistration exception: " + e.getMessage());
+      log.warning("Deregistration exception: " + e.getMessage());
     }
   }
 
-  private static String getInstanceId() {
-    return getHostName() + ":" + APP_NAME + ":" + servicePort;
-  }
-
-  private static String getHostName() {
+  private int getHttpPort() {
     try {
-      return InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      return "people-collection-service";
+        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+        ObjectName binding = new ObjectName("jboss.as:socket-binding-group=standard-sockets,socket-binding=http");
+        return (Integer) server.getAttribute(binding, "boundPort");
+    } catch (Exception e) {
+        String portStr = System.getProperty("jboss.http.port");
+        try {
+            return Integer.parseInt(portStr);
+        } catch (NumberFormatException ex) {
+            throw new RuntimeException("Failed to determine HTTP port", e);
+        }
     }
   }
 
@@ -189,6 +194,11 @@ public class EurekaRegistrar {
     public int value;
     @JsonProperty("@enabled")
     public String enabled;
+
+    public Port(int value, boolean enabled) {
+      this.value = value;
+      this.enabled = String.valueOf(enabled);
+    }
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -196,11 +206,20 @@ public class EurekaRegistrar {
     @JsonProperty("@class")
     public String clazz = "com.netflix.appinfo.MyDataCenterInfo";
     public String name;
+
+    public DataCenterInfo(String name) {
+      this.name = name;
+    }
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   static class LeaseInfo {
-    public int renewalIntervalInSecs = HEARTBEAT_INTERVAL;
-    public int durationInSecs = 3 * HEARTBEAT_INTERVAL;
+    public int renewalIntervalInSecs;
+    public int durationInSecs;
+
+    public LeaseInfo(int renewalIntervalInSecs, int durationInSecs) {
+      this.renewalIntervalInSecs = renewalIntervalInSecs;
+      this.durationInSecs = durationInSecs;
+    }
   }
 }

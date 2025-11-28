@@ -23,18 +23,27 @@ import javax.management.ObjectName;
 @Startup
 public class ConsulRegistrar {
 
-  private static final Logger LOG = Logger.getLogger(ConsulRegistrar.class.getName());
+  private static final Logger log = Logger.getLogger(ConsulRegistrar.class.getName());
 
   private final String serviceName = "people-service";
-  private final String consulHost = System.getenv().get("CONSUL_HOST");
-  private final int consulPort = Integer.parseInt(System.getenv().get("CONSUL_PORT"));
+  private final String consulHost;
+  private final int consulPort;
 
-  private final String serviceHost = System.getenv().getOrDefault("SERVICE_HOST", "172.17.0.1");
-  private final int servicePort = getHttpPort();
-  private final String serviceId = serviceName + "-" + UUID.randomUUID().toString().substring(0, 8);
-  private final String healthCheckUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/health";
+  private final String serviceHost;
+  private final int servicePort;
+  private final String serviceId;
+  private final String healthCheckUrl;
 
   private CloseableHttpClient httpClient;
+
+  public ConsulRegistrar() {
+    this.consulHost = System.getenv().get("CONSUL_HOST");
+    this.consulPort = Integer.parseInt(System.getenv().get("CONSUL_PORT"));
+    this.serviceHost = System.getenv().get("SERVICE_HOST");
+    this.servicePort = getHttpPort();
+    this.serviceId = serviceName + "-" + UUID.randomUUID().toString().substring(0, 8);
+    this.healthCheckUrl = "http://" + serviceHost + ":" + servicePort + "/api/v1/health";
+  }
 
   @PostConstruct
   public void register() {
@@ -62,14 +71,14 @@ public class ConsulRegistrar {
       httpClient.execute(request, response -> {
         int status = response.getCode();
         if (status >= 200 && status < 300) {
-          LOG.info("Successfully registered in Consul");
+          log.info("Successfully registered in Consul");
         } else {
-          LOG.severe("Failed to register in Consul: HTTP " + status);
+          log.severe("Failed to register in Consul: HTTP " + status);
         }
         return null;
       });
     } catch (IOException e) {
-      LOG.severe("Exception during Consul registration: " + e.getMessage());
+      log.severe("Exception during Consul registration: " + e.getMessage());
     }
   }
 
@@ -79,18 +88,18 @@ public class ConsulRegistrar {
     try {
       var request = ClassicRequestBuilder.put(deregisterUrl).build();
       httpClient.execute(request, response -> {
-        LOG.info("Deregistered from Consul");
+        log.info("Deregistered from Consul");
         return null;
       });
     } catch (IOException e) {
-      LOG.warning("Failed to deregister from Consul: " + e.getMessage());
+      log.warning("Failed to deregister from Consul: " + e.getMessage());
     } finally {
       try {
         if (httpClient != null) {
           httpClient.close();
         }
       } catch (IOException e) {
-        LOG.warning("Failed to close HTTP client: " + e.getMessage());
+        log.warning("Failed to close HTTP client: " + e.getMessage());
       }
     }
   }
