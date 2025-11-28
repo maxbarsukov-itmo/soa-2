@@ -15,6 +15,11 @@ eureka:
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${random.uuid}
+    hostname: ${SERVICE_HOST}
+    ip-address: ${SERVICE_HOST}
+    status-page-url: http://${SERVICE_HOST}:${server.port}/actuator/info
+    health-check-url: http://${SERVICE_HOST}:${server.port}/api/v1/health
+    home-page-url: http://${SERVICE_HOST}:${server.port}/
 
 management:
   endpoints:

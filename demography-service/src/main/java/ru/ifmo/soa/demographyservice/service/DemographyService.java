@@ -47,7 +47,6 @@ public class DemographyService {
       long count = countSupplier.get();
       return resultMapper.apply(count, total);
     } catch (IOException e) {
-      // FIXME
       throw new RuntimeException(e);
     }
   }
