@@ -32,7 +32,7 @@ public class EurekaRegistrar {
 
   private static final Logger log = Logger.getLogger(EurekaRegistrar.class.getName());
 
-  private final String appName = "PEOPLE-SERVICE";
+  private final String appName = "people-service";
   private final int heartbeatInterval = 30; // seconds
 
   private final String eurekaBaseUrl;
